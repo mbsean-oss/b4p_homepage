@@ -1,0 +1,104 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getAllPosts } from '../../lib/site';
+import { format } from 'date-fns';
+import type { BlogPost } from '../../lib/notion';
+
+export async function getStaticPaths() {
+  const posts = await getAllPosts();
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: BlogPost;
+}
+const { post } = Astro.props as Props;
+const dateLabel = post.publishedAt
+  ? format(new Date(post.publishedAt), 'yyyy.MM.dd')
+  : '';
+
+const allPosts = await getAllPosts();
+const relatedByCat = allPosts
+  .filter((p) => p.slug !== post.slug && p.category === post.category)
+  .slice(0, 3);
+const fallbackRelated = allPosts
+  .filter((p) => p.slug !== post.slug)
+  .slice(0, 3);
+const relatedPosts = relatedByCat.length > 0 ? relatedByCat : fallbackRelated;
+
+const hasRealBody = !!(post.body && post.body.trim());
+---
+<BaseLayout
+  title={post.seoTitle || post.title}
+  description={post.seoDescription || post.excerpt}
+  canonicalPath={`/blog/${post.slug}`}
+  ogImage={post.coverImage}
+  noindex={post.noindex}
+>
+  <article class="post-detail">
+    <div class="post-detail__meta">
+      {post.category && <span class="post-card__category">{post.category}</span>}
+      {dateLabel && <span>{dateLabel}</span>}
+      {post.sourceType !== 'original' && (
+        <span>
+          {post.sourceType === 'migrated_from_naver' ? '네이버 블로그 이전 글' : '네이버 블로그 요약'}
+        </span>
+      )}
+    </div>
+    <h1 class="post-detail__title">{post.title}</h1>
+    {post.excerpt && <p class="post-detail__excerpt">{post.excerpt}</p>}
+    {post.coverImage && (
+      <div class="post-detail__cover">
+        <img src={post.coverImage} alt={post.title} />
+      </div>
+    )}
+
+    {hasRealBody ? (
+      <div class="post-detail__body" set:html={post.body} />
+    ) : (
+      <div class="post-detail__body">
+        <p>이 글은 Notion에서 관리되는 콘텐츠입니다. 현재는 테스트/모의 모드로 운영되고 있으며, 실제 노션 통합이 연결되면 자동으로 내용이 채워집니다.</p>
+        <h2>{post.title} - 핵심 요약</h2>
+        {post.excerpt && <p>{post.excerpt}</p>}
+        <h2>왜 중요한가</h2>
+        <p>해당 주제는 비즈니스 운영에서 실질적인 영향을 줄 수 있어 정리했습니다.</p>
+        <aside class="callout">
+          운영 중인 사이트라면 <a href="/contact">문의 페이지</a>에서 더 깊이 상담받을 수 있습니다.
+        </aside>
+        <h2>운영자가 권장하는 후속 행동</h2>
+        <ul>
+          <li>현재 홈페이지의 정보 구조를 한 번 점검합니다.</li>
+          <li>Notion에 작성할 글의 슬러그와 카테고리를 미리 정합니다.</li>
+          <li>SEO 메타(title, description)를 글 발행 전 반드시 채웁니다.</li>
+        </ul>
+      </div>
+    )}
+
+    {post.tags && post.tags.length > 0 && (
+      <div class="post-detail__tags">
+        {post.tags.map((tag) => <span class="post-detail__tag">#{tag}</span>)}
+      </div>
+    )}
+
+    <div class="cta">
+      <h3>더 많은 인사이트가 필요하신가요?</h3>
+      <p>블로그에서 다른 글도 함께 확인해 보세요.</p>
+      <a href="/blog" class="btn">블로그로 가기</a>
+    </div>
+  </article>
+
+  {relatedPosts.length > 0 && (
+    <section class="related-posts">
+      <div class="container">
+        <h3>관련 글</h3>
+        <div class="card-grid card-grid--3">
+          {relatedPosts.map((p) => <PostCard post={p} />)}
+        </div>
+      </div>
+    </section>
+  )}
+</BaseLayout>
