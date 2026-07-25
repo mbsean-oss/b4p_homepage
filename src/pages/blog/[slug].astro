@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getAllPosts, getBlogPostBySlug } from '../../lib/notion';
+import { getAllPosts } from '../../lib/site';
+import { getBlogPostBySlug } from '../../lib/notion';
 import { format } from 'date-fns';
 import type { BlogPost } from '../../lib/notion';
 
