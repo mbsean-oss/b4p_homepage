@@ -1,0 +1,30 @@
+---
+import { format } from 'date-fns';
+import type { BlogPost } from '../lib/notion';
+
+export interface Props {
+  post: BlogPost;
+}
+
+const { post } = Astro.props;
+const dateLabel = post.publishedAt
+  ? format(new Date(post.publishedAt), 'yyyy.MM.dd')
+  : '';
+---
+<a href={`/blog/${post.slug}`} class="post-card">
+  {
+    post.coverImage && (
+      <div class="post-card__cover">
+        <img src={post.coverImage} alt={post.title} loading="lazy" />
+      </div>
+    )
+  }
+  <div class="post-card__body">
+    <div class="post-card__meta">
+      {post.category && <span class="post-card__category">{post.category}</span>}
+      {dateLabel && <span>{dateLabel}</span>}
+    </div>
+    <h3 class="post-card__title">{post.title}</h3>
+    {post.excerpt && <p class="post-card__excerpt">{post.excerpt}</p>}
+  </div>
+</a>
