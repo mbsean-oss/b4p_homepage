@@ -88,6 +88,23 @@ function getDate(prop: any): string {
   return prop?.date?.start ?? '';
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderInlineText(text: string): string {
+  return escapeHtml(text).replace(/\n/g, '<br />');
+}
+
+function getImageBlockUrl(block: any): string {
+  return block.image?.external?.url || block.image?.file?.url || '';
+}
+
 // Read blocks recursively and convert to markdown-ish HTML
 function blocksToMarkdown(blocks: any[]): string {
   const lines: string[] = [];
@@ -95,40 +112,69 @@ function blocksToMarkdown(blocks: any[]): string {
     const text = getPlainText(block[block.type]?.rich_text);
     switch (block.type) {
       case 'paragraph':
-        lines.push(`<p>${text}</p>`);
+        lines.push(`<p>${renderInlineText(text)}</p>`);
         break;
       case 'heading_1':
-        lines.push(`<h2>${text}</h2>`);
+        lines.push(`<h1>${renderInlineText(text)}</h1>`);
         break;
       case 'heading_2':
-        lines.push(`<h2>${text}</h2>`);
+        lines.push(`<h2>${renderInlineText(text)}</h2>`);
         break;
       case 'heading_3':
-        lines.push(`<h3>${text}</h3>`);
+        lines.push(`<h3>${renderInlineText(text)}</h3>`);
         break;
       case 'bulleted_list_item':
-        lines.push(`<ul><li>${text}</li></ul>`);
+        lines.push(`<ul><li>${renderInlineText(text)}</li></ul>`);
         break;
       case 'numbered_list_item':
-        lines.push(`<ol><li>${text}</li></ol>`);
+        lines.push(`<ol><li>${renderInlineText(text)}</li></ol>`);
         break;
       case 'quote':
-        lines.push(`<blockquote>${text}</blockquote>`);
+        lines.push(`<blockquote>${renderInlineText(text)}</blockquote>`);
         break;
       case 'code':
         lines.push(
-          `<pre><code>${(block.code?.rich_text ?? [])
-            .map((t: any) => t.plain_text ?? '')
-            .join('')}</code></pre>`
+          `<pre><code>${escapeHtml(
+            (block.code?.rich_text ?? []).map((t: any) => t.plain_text ?? '').join('')
+          )}</code></pre>`
         );
         break;
       case 'callout':
         lines.push(
-          `<aside class="callout">${(block.callout?.rich_text ?? [])
-            .map((t: any) => t.plain_text ?? '')
-            .join('')}</aside>`
+          `<aside class="callout">${renderInlineText(
+            (block.callout?.rich_text ?? []).map((t: any) => t.plain_text ?? '').join('')
+          )}</aside>`
         );
         break;
+      case 'image': {
+        const imageUrl = getImageBlockUrl(block);
+        const caption = getPlainText(block.image?.caption);
+        if (imageUrl) {
+          lines.push(
+            `<figure class="notion-figure notion-figure--image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(caption || '본문 이미지')}" loading="lazy" />${
+              caption ? `<figcaption>${renderInlineText(caption)}</figcaption>` : ''
+            }</figure>`
+          );
+        }
+        break;
+      }
+      case 'divider':
+        lines.push('<hr />');
+        break;
+      case 'bookmark': {
+        const url = block.bookmark?.url ?? '';
+        if (url) {
+          lines.push(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></p>`);
+        }
+        break;
+      }
+      case 'embed': {
+        const url = block.embed?.url ?? '';
+        if (url) {
+          lines.push(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></p>`);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -221,6 +267,26 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   const posts = await getBlogPosts();
   return posts.find((p) => p.slug === slug) ?? null;
+}
+
+export async function getBlogPostFullBySlug(slug: string): Promise<BlogPost | null> {
+  const meta = await getBlogPostBySlug(slug);
+  if (!meta) return null;
+
+  let body = '';
+  if (meta.id) {
+    try {
+      const blocks = await fetchAllChildBlocks(meta.id);
+      body = blocksToMarkdown(blocks);
+    } catch (e) {
+      console.error('Failed to fetch blog post body:', e);
+    }
+  }
+
+  return {
+    ...meta,
+    body,
+  };
 }
 
 export async function getBlogPostsByCategory(
