@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
 import { getAllPosts } from '../../lib/site';
-import { getBlogPostBySlug } from '../../lib/notion';
+import { getBlogPostFullBySlug } from '../../lib/notion';
 import { format } from 'date-fns';
 import type { BlogPost } from '../../lib/notion';
 
@@ -13,66 +14,101 @@ export async function getStaticPaths() {
   }));
 }
 
-const { post } = Astro.props as { post: BlogPost };
-const full = await getBlogPostBySlug(post.slug);
-const body = full?.body || '';
-const useNotion = Boolean(body);
+interface Props {
+  post: BlogPost;
+}
 
-const formattedDate = post.publishedAt
-  ? format(new Date(post.publishedAt), 'yyyy.MM.dd')
+const { post } = Astro.props as Props;
+const resolvedPost = (await getBlogPostFullBySlug(post.slug)) ?? post;
+const dateLabel = resolvedPost.publishedAt
+  ? format(new Date(resolvedPost.publishedAt), 'yyyy.MM.dd')
   : '';
----
 
+const allPosts = await getAllPosts();
+const relatedByCat = allPosts
+  .filter((p) => p.slug !== resolvedPost.slug && p.category === resolvedPost.category)
+  .slice(0, 3);
+const fallbackRelated = allPosts
+  .filter((p) => p.slug !== resolvedPost.slug)
+  .slice(0, 3);
+const relatedPosts = relatedByCat.length > 0 ? relatedByCat : fallbackRelated;
+
+const hasRealBody = !!(resolvedPost.body && resolvedPost.body.trim());
+---
 <BaseLayout
-  title={post.seoTitle || post.title}
-  description={post.seoDescription || post.excerpt}
+  title={resolvedPost.seoTitle || resolvedPost.title}
+  description={resolvedPost.seoDescription || resolvedPost.excerpt}
+  canonicalPath={`/blog/${resolvedPost.slug}`}
+  ogImage={resolvedPost.coverImage}
+  noindex={resolvedPost.noindex}
 >
   <article class="post-detail">
-    <header class="post-detail__header">
-      {post.category && (
-        <span class="hero__pill">{post.category}</span>
+    <div class="post-detail__meta">
+      {resolvedPost.category && <span class="post-card__category">{resolvedPost.category}</span>}
+      {dateLabel && <span>{dateLabel}</span>}
+      {resolvedPost.sourceType !== 'original' && (
+        <span>
+          {resolvedPost.sourceType === 'migrated_from_naver' ? '네이버 블로그 이전 글' : '네이버 블로그 요약'}
+        </span>
       )}
-      <h1 class="post-detail__title">{post.title}</h1>
-      {post.excerpt && (
-        <p class="post-detail__excerpt">{post.excerpt}</p>
-      )}
-      <div class="post-detail__meta">
-        {formattedDate && (
-          <time datetime={post.publishedAt}>{formattedDate}</time>
-        )}
-        {post.tags && post.tags.length > 0 && (
-          <div class="post-detail__tags">
-            {post.tags.map((tag) => (
-              <span class="blog-list__chip">#{tag}</span>
-            ))}
-          </div>
-        )}
+    </div>
+    <h1 class="post-detail__title">{resolvedPost.title}</h1>
+    {resolvedPost.excerpt && <p class="post-detail__excerpt">{resolvedPost.excerpt}</p>}
+    {resolvedPost.coverImage && (
+      <div class="post-detail__cover">
+        <img src={resolvedPost.coverImage} alt={resolvedPost.title} />
       </div>
-    </header>
+    )}
 
-    {useNotion ? (
-      <div class="post-detail__body" set:html={body} />
+    {hasRealBody ? (
+      <div class="post-detail__body" set:html={resolvedPost.body} />
     ) : (
       <div class="post-detail__body">
-        <p>이 글은 곧 더 풍부한 내용으로 업데이트될 예정입니다.</p>
-        <aside class="callout">
-          운영 중인 사이트에서는 노션에서 본문을 직접 관리하는 것을 권장드립니다.
-          <br />- Posts 데이터베이스의 published 체크
-          <br />- 본문 블록은 노션 페이지 본문 영역에 작성
-        </aside>
-        <h2>관련 후속 행동</h2>
-        <ul>
-          <li>현재 글의 카테고리와 슬러그가 일관되는지 확인합니다.</li>
-          <li>SEO 메타(title, description) 값을 채워 발행 품질을 높입니다.</li>
-          <li>필요시 네이버 블로그에서 가져온 글로 표시하려면 legacy_url 을 채워주세요.</li>
-        </ul>
+        <p>이 글의 본문 블록이 아직 비어 있습니다. Notion 글 페이지 본문 영역에 내용을 작성하면 이 자리에 그대로 반영됩니다.</p>
       </div>
     )}
 
-    {post.legacyUrl && (
-      <p class="post-detail__legacy">
-        이 글은 이전 <a href={post.legacyUrl} rel="canonical">네이버 블로그 포스트</a>에서 가져온 글입니다.
-      </p>
+    {resolvedPost.tags && resolvedPost.tags.length > 0 && (
+      <div class="post-detail__tags">
+        {resolvedPost.tags.map((tag) => <span class="post-detail__tag">#{tag}</span>)}
+      </div>
     )}
+
+    <div class="cta">
+      <h3>더 많은 인사이트가 필요하신가요?</h3>
+      <p>블로그에서 다른 글도 함께 확인해 보세요.</p>
+      <a href="/blog" class="btn">블로그로 가기</a>
+    </div>
   </article>
+
+  {relatedPosts.length > 0 && (
+    <section class="related-posts">
+      <div class="container">
+        <h3>관련 글</h3>
+        <div class="card-grid card-grid--3">
+          {relatedPosts.map((p) => <PostCard post={p} />)}
+        </div>
+      </div>
+    </section>
+  )}
 </BaseLayout>
+
+<style>
+  .post-detail__body :global(figure.notion-figure) {
+    margin: 24px 0;
+  }
+
+  .post-detail__body :global(figure.notion-figure img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+  }
+
+  .post-detail__body :global(figure.notion-figure figcaption) {
+    margin-top: 8px;
+    font-size: 0.92rem;
+    color: #667085;
+    text-align: center;
+  }
+</style>
