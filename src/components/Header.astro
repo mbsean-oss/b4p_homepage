@@ -4,9 +4,12 @@ import { SITE_NAME, getNavItems } from '../lib/site';
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const navItems = await getNavItems();
 ---
-<header class="site-header">
+<header class="site-header site-header--brand">
   <div class="container site-header__inner">
-    <a href="/" class="site-header__logo">{SITE_NAME}</a>
+    <a href="/" class="site-header__logo site-header__logo--with-mark" aria-label={`${SITE_NAME} 홈`}>
+      <img src="/logo-book4painter.png" alt="" class="site-header__mark" />
+      <span>{SITE_NAME}</span>
+    </a>
     <nav class="site-nav" aria-label="주요 메뉴">
       {
         navItems.map((item) => {
@@ -22,3 +25,43 @@ const navItems = await getNavItems();
     </nav>
   </div>
 </header>
+
+<style>
+  .site-header--brand {
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .site-header__logo--with-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.78rem;
+    color: #163934;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .site-header__logo--with-mark:hover {
+    text-decoration: none;
+  }
+
+  .site-header__mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    object-fit: cover;
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 900px) {
+    .site-header__logo--with-mark {
+      gap: 0.6rem;
+      font-size: 1rem;
+    }
+
+    .site-header__mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+    }
+  }
+</style>

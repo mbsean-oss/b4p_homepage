@@ -1,101 +1,130 @@
 ---
 import { SITE_NAME } from '../lib/site';
-const year = new Date().getFullYear();
+const year = 2026;
 ---
-<footer class="site-footer site-footer--brand">
-  <div class="container site-footer__stack">
-    <div class="site-footer__brandline">{SITE_NAME}</div>
+<footer class="site-footer site-footer--brand-clean">
+  <div class="container site-footer__wrap">
+    <div class="site-footer__topline">
+      <div class="site-footer__brand">{SITE_NAME}</div>
+      <a class="site-footer__consult" href="https://book4painter.notion.site/200d1fa59b798035a614f3ab95d779e3?pvs=105" target="_blank" rel="noreferrer">상담 신청</a>
+    </div>
 
-    <div class="site-footer__info-grid">
-      <section>
-        <h3>광교본원</h3>
-        <p>경기도 수원시 영통구 대학로 101, 201호</p>
-        <p><a href="tel:0312162322">031-216-2322</a></p>
+    <div class="site-footer__content-grid">
+      <section class="site-footer__section">
+        <h3>주소와 연락처</h3>
+        <p><strong>광교본원</strong> : 경기도 수원시 영통구 대학로 101, 201호 &nbsp;|&nbsp; 031-216-2322</p>
+        <p><strong>망포분원</strong> : 경기도 수원시 영통구 망포로 142, 202호 &nbsp;|&nbsp; 070-7818-2322</p>
+        <p><strong>이메일</strong> : <a href="mailto:book4painter@naver.com">book4painter@naver.com</a></p>
       </section>
 
-      <section>
-        <h3>망포분원</h3>
-        <p>경기도 수원시 영통구 망포로 142, 202호</p>
-        <p><a href="tel:07078182322">070-7818-2322</a></p>
-      </section>
-
-      <section>
-        <h3>Instagram</h3>
-        <p><a href="https://www.instagram.com/book4painter_/" target="_blank" rel="noreferrer">@book4painter_</a></p>
+      <section class="site-footer__section">
+        <h3>채널 안내</h3>
+        <ul class="site-footer__link-list">
+          <li><a href="https://www.instagram.com/book4painter_/" target="_blank" rel="noreferrer">Instagram</a></li>
+          <li><a href="https://blog.naver.com/book4painter" target="_blank" rel="noreferrer">blog</a></li>
+          <li><a href="http://pf.kakao.com/_xnKduj" target="_blank" rel="noreferrer">카카오채널 광교</a></li>
+          <li><a href="http://pf.kakao.com/_XtQRX" target="_blank" rel="noreferrer">카카오채널 망포</a></li>
+          <li><a href="https://naver.me/Fytbc9Hr" target="_blank" rel="noreferrer">네이버플레이스 광교</a></li>
+          <li><a href="https://naver.me/xCjmmCRZ" target="_blank" rel="noreferrer">네이버플레이스 망포</a></li>
+        </ul>
       </section>
     </div>
 
     <div class="site-footer__bottom">
-      <nav class="site-footer__links" aria-label="푸터 메뉴">
-        <a href="/privacy">개인정보처리방침</a>
-        <a href="/blog">블로그</a>
-        <a href="/contact">문의</a>
-      </nav>
-      <div>© {year} {SITE_NAME}. 모든 권리 보유.</div>
+      <span>ⓒ {year} {SITE_NAME}. All rights reserved.</span>
     </div>
   </div>
 </footer>
 
 <style>
-  .site-footer--brand {
-    background: #fbfaf7;
-    border-top: 1px solid rgba(15, 23, 42, 0.08);
-    color: #42515a;
+  .site-footer--brand-clean {
+    background: #12779a;
+    color: rgba(255, 255, 255, 0.92);
+    border-top: none;
     margin-top: 0;
+    padding: 64px 0 34px;
   }
 
-  .site-footer__stack {
+  .site-footer__wrap {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2rem;
   }
 
-  .site-footer__brandline {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #173934;
-    letter-spacing: -0.02em;
-  }
-
-  .site-footer__info-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-
-  .site-footer__info-grid section {
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    border-radius: 18px;
-    padding: 1rem 1.1rem;
-  }
-
-  .site-footer__info-grid h3 {
-    margin: 0 0 0.55rem;
-    font-size: 0.95rem;
-    color: #132f2b;
-  }
-
-  .site-footer__info-grid p {
-    margin: 0.25rem 0;
-  }
-
-  .site-footer__info-grid a,
-  .site-footer__links a {
-    color: inherit;
-  }
-
-  .site-footer__bottom {
+  .site-footer__topline {
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
+  }
+
+  .site-footer__brand {
+    color: #fff;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .site-footer__consult {
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.72rem 1.15rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .site-footer__consult:hover {
+    background: rgba(255, 255, 255, 0.12);
+    text-decoration: none;
+  }
+
+  .site-footer__content-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 2rem 3rem;
+  }
+
+  .site-footer__section h3 {
+    margin: 0 0 0.9rem;
+    color: #fff;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .site-footer__section p {
+    margin: 0 0 0.6rem;
+    line-height: 1.8;
+  }
+
+  .site-footer__link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
+  }
+
+  .site-footer--brand-clean a {
+    color: #fff;
+  }
+
+  .site-footer__bottom {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.82);
     font-size: 0.92rem;
   }
 
   @media (max-width: 900px) {
-    .site-footer__info-grid {
+    .site-footer__content-grid,
+    .site-footer__link-list {
       grid-template-columns: 1fr;
     }
   }
