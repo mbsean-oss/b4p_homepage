@@ -1,20 +1,25 @@
 ---
-import { SITE_NAME } from '../lib/site';
 const year = 2026;
 ---
 <footer class="site-footer site-footer--brand-clean">
   <div class="container site-footer__wrap">
     <div class="site-footer__topline">
-      <div class="site-footer__brand">{SITE_NAME}</div>
+      <img src="/logo-book4painter-wordmark.png" alt="책먹는4차원화가" class="site-footer__wordmark" />
       <a class="site-footer__consult" href="https://book4painter.notion.site/200d1fa59b798035a614f3ab95d779e3?pvs=105" target="_blank" rel="noreferrer">상담 신청</a>
     </div>
 
     <div class="site-footer__content-grid">
       <section class="site-footer__section">
-        <h3>주소와 연락처</h3>
+        <div class="site-footer__icon-heading" aria-label="위치 및 연락처">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="site-footer__location-icon">
+            <path d="M12 21s6-5.6 6-11a6 6 0 1 0-12 0c0 5.4 6 11 6 11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+        </div>
         <p><strong>광교본원</strong> : 경기도 수원시 영통구 대학로 101, 201호 &nbsp;|&nbsp; 031-216-2322</p>
         <p><strong>망포분원</strong> : 경기도 수원시 영통구 망포로 142, 202호 &nbsp;|&nbsp; 070-7818-2322</p>
-        <p><strong>이메일</strong> : <a href="mailto:book4painter@naver.com">book4painter@naver.com</a></p>
+        <p><strong>책사화 출판사</strong> : 경기도 수원시 영통구 대학로 101, 202호</p>
+        <p><strong>이메일주소</strong> : <a href="mailto:book4painter@naver.com">book4painter@naver.com</a></p>
       </section>
 
       <section class="site-footer__section">
@@ -31,7 +36,7 @@ const year = 2026;
     </div>
 
     <div class="site-footer__bottom">
-      <span>ⓒ {year} {SITE_NAME}. All rights reserved.</span>
+      <span>ⓒ {year} 책먹는4차원화가. All rights reserved.</span>
     </div>
   </div>
 </footer>
@@ -59,11 +64,10 @@ const year = 2026;
     flex-wrap: wrap;
   }
 
-  .site-footer__brand {
-    color: #fff;
-    font-size: 1.45rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
+  .site-footer__wordmark {
+    width: min(100%, 340px);
+    height: auto;
+    display: block;
   }
 
   .site-footer__consult {
@@ -86,7 +90,7 @@ const year = 2026;
 
   .site-footer__content-grid {
     display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-columns: 1.1fr 0.9fr;
     gap: 2rem 3rem;
   }
 
@@ -95,6 +99,16 @@ const year = 2026;
     color: #fff;
     font-size: 1rem;
     letter-spacing: -0.01em;
+  }
+
+  .site-footer__icon-heading {
+    margin-bottom: 0.9rem;
+  }
+
+  .site-footer__location-icon {
+    width: 30px;
+    height: 30px;
+    color: #fff;
   }
 
   .site-footer__section p {
@@ -126,6 +140,10 @@ const year = 2026;
     .site-footer__content-grid,
     .site-footer__link-list {
       grid-template-columns: 1fr;
+    }
+
+    .site-footer__wordmark {
+      width: min(100%, 280px);
     }
   }
 </style>

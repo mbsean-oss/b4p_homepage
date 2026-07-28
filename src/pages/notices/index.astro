@@ -1,0 +1,123 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllNotices } from '../../lib/notion';
+
+const notices = await getAllNotices();
+---
+
+<BaseLayout title="학원 공지사항" description="책먹는4차원화가 공지사항 목록">
+  <section class="section">
+    <div class="container notices-page">
+      <div class="section-heading">
+        <h1 class="section__title">학원 공지사항</h1>
+        <p class="section__subtitle">운영 공지, 모집 일정, 특강 소식을 한곳에서 확인하세요.</p>
+      </div>
+
+      {notices.length > 0 ? (
+        <ul class="notice-list-page">
+          {notices.map((notice) => (
+            <li class="notice-list-page__item">
+              <div class="notice-list-page__meta">
+                {notice.important && <span class="notice-badge notice-badge--important">중요</span>}
+                {notice.location && <span class="notice-badge">{notice.location}</span>}
+                {notice.category && <span class="notice-badge">{notice.category}</span>}
+              </div>
+              <div class="notice-list-page__body">
+                {notice.slug ? (
+                  <a href={`/notices/${notice.slug}`} class="notice-list-page__title">{notice.title}</a>
+                ) : notice.linkUrl ? (
+                  <a href={notice.linkUrl} class="notice-list-page__title" target="_blank" rel="noreferrer">{notice.title}</a>
+                ) : (
+                  <span class="notice-list-page__title">{notice.title}</span>
+                )}
+                <time class="notice-list-page__date" datetime={notice.publishedAt}>{notice.publishedAt}</time>
+              </div>
+              {notice.summary && <p class="notice-list-page__summary">{notice.summary}</p>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div class="notice-empty">등록된 공지사항이 없습니다.</div>
+      )}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .notices-page {
+    max-width: 960px;
+  }
+
+  .notice-list-page {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .notice-list-page__item {
+    padding: 1.1rem 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .notice-list-page__meta {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+
+  .notice-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    background: #eef2f4;
+    color: #50616a;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .notice-badge--important {
+    background: #fee7e3;
+    color: #c54d35;
+  }
+
+  .notice-list-page__body {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .notice-list-page__title {
+    color: #13232a;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  .notice-list-page__title:hover {
+    text-decoration: underline;
+  }
+
+  .notice-list-page__date {
+    white-space: nowrap;
+    color: #7b8791;
+    font-size: 0.9rem;
+  }
+
+  .notice-list-page__summary {
+    margin: 0.7rem 0 0;
+    color: #63707a;
+  }
+
+  @media (max-width: 760px) {
+    .notice-list-page__body {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

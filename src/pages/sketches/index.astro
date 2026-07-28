@@ -1,0 +1,138 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllSketches } from '../../lib/notion';
+
+const sketches = await getAllSketches();
+---
+
+<BaseLayout title="수업스케치" description="책먹는4차원화가 수업스케치 목록">
+  <section class="section section--muted">
+    <div class="container sketches-page">
+      <div class="section-heading">
+        <h1 class="section__title">수업스케치</h1>
+        <p class="section__subtitle">수업 장면과 결과물을 편하게 둘러보세요.</p>
+      </div>
+
+      {sketches.length > 0 ? (
+        <div class="sketch-page-grid">
+          {sketches.map((sketch) => (
+            <button type="button" class="sketch-page-card" data-lightbox-trigger data-lightbox-image={sketch.image} data-lightbox-alt={sketch.title} aria-label={`${sketch.title} 확대 보기`}>
+              <img src={sketch.image} alt={sketch.title} class="sketch-page-card__image" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div class="notice-empty">등록된 수업스케치가 없습니다.</div>
+      )}
+    </div>
+  </section>
+
+  <dialog class="lightbox" data-lightbox>
+    <button type="button" class="lightbox__close" aria-label="닫기" data-lightbox-close>×</button>
+    <img src="" alt="" class="lightbox__image" data-lightbox-view />
+  </dialog>
+
+  <script>
+    const setupLightbox = () => {
+      const dialog = document.querySelector('[data-lightbox]');
+      const view = dialog?.querySelector('[data-lightbox-view]');
+      const closeBtn = dialog?.querySelector('[data-lightbox-close]');
+      if (!dialog || !view) return;
+
+      const open = (src, alt) => {
+        view.setAttribute('src', src || '');
+        view.setAttribute('alt', alt || '확대 이미지');
+        dialog.showModal();
+      };
+
+      const close = () => dialog.close();
+
+      document.querySelectorAll('[data-lightbox-trigger]').forEach((trigger) => {
+        trigger.addEventListener('click', () => open(trigger.getAttribute('data-lightbox-image'), trigger.getAttribute('data-lightbox-alt')));
+      });
+
+      closeBtn?.addEventListener('click', close);
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) close();
+      });
+    };
+
+    setupLightbox();
+  </script>
+</BaseLayout>
+
+<style>
+  .sketches-page {
+    max-width: 1100px;
+  }
+
+  .sketch-page-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .sketch-page-card {
+    display: block;
+    aspect-ratio: 4 / 3;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    cursor: zoom-in;
+    padding: 0;
+  }
+
+  .sketch-page-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .lightbox {
+    border: none;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.92);
+    width: min(92vw, 1100px);
+    max-width: 1100px;
+    overflow: visible;
+  }
+
+  .lightbox::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+  }
+
+  .lightbox__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 86vh;
+    object-fit: contain;
+  }
+
+  .lightbox__close {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 900px) {
+    .sketch-page-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .sketch-page-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
