@@ -208,10 +208,10 @@ const programColorMap: Record<string, string> = {
           <aside class="promo-card">
             <div class="promo-card__media">
               <img src={secondaryImage} alt={heroSecondaryText || '안내 이미지'} loading="lazy" />
-            </div>
-            <div class="promo-card__content">
-              {heroSecondaryText && <p class="promo-card__text">{heroSecondaryText}</p>}
-              <a href={heroSecondaryUrl} class="btn btn--primary">{heroSecondaryLabel}</a>
+              <div class="promo-card__content promo-card__content--overlay">
+                {heroSecondaryText && <p class="promo-card__text">{heroSecondaryText}</p>}
+                <a href={heroSecondaryUrl} class="btn btn--primary promo-card__cta">{heroSecondaryLabel}</a>
+              </div>
             </div>
           </aside>
         )
@@ -665,10 +665,10 @@ const programColorMap: Record<string, string> = {
 
   .feature-band__frame {
     position: relative;
-    overflow: hidden;
-    border-radius: 30px;
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .feature-band__frame img {
@@ -690,18 +690,33 @@ const programColorMap: Record<string, string> = {
 
   .feature-band__caption {
     margin: 0;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(8px);
-    color: #17312f;
-    padding: 0.85rem 1rem;
-    border-radius: 18px;
-    font-weight: 600;
+    background: none;
+    backdrop-filter: none;
+    color: #fff;
+    padding: 0;
+    border-radius: 0;
+    font-weight: 700;
     text-align: right;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+    box-shadow: none;
+  }
+
+  .feature-band .btn--primary,
+  .promo-card .btn--primary {
+    background: #12779a;
+    border-color: #12779a;
+    color: #fff;
+  }
+
+  .feature-band .btn--primary:hover,
+  .promo-card .btn--primary:hover {
+    background: #0f627f;
+    border-color: #0f627f;
+    text-decoration: none;
   }
 
   .feature-band__cta {
-    box-shadow: 0 12px 24px rgba(21, 57, 52, 0.18);
+    box-shadow: 0 12px 24px rgba(18, 119, 154, 0.24);
   }
 
   .section-heading {
@@ -885,33 +900,57 @@ const programColorMap: Record<string, string> = {
   }
 
   .promo-card {
-    display: flex;
-    flex-direction: column;
-    background: #173934;
+    position: relative;
     color: #fff;
     border-radius: 28px;
     overflow: hidden;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
   }
 
+  .promo-card__media {
+    position: relative;
+    min-height: 540px;
+    height: 100%;
+  }
+
+  .promo-card__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11, 26, 33, 0.06) 8%, rgba(11, 26, 33, 0.72) 100%);
+  }
+
   .promo-card__media img {
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
     display: block;
   }
 
   .promo-card__content {
-    padding: 1.4rem;
+    position: absolute;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 2;
+    max-width: min(320px, calc(100% - 2.5rem));
+    padding: 0;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: flex-end;
+    gap: 0.9rem;
   }
 
   .promo-card__text {
     margin: 0;
     font-size: 1.05rem;
     line-height: 1.6;
+    color: #fff;
+    text-align: right;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  .promo-card__cta {
+    box-shadow: 0 12px 24px rgba(18, 119, 154, 0.24);
   }
 
   .section--muted {
@@ -1113,6 +1152,22 @@ const programColorMap: Record<string, string> = {
     }
 
     .feature-band__caption {
+      text-align: left;
+    }
+
+    .promo-card__media {
+      min-height: 420px;
+    }
+
+    .promo-card__content {
+      left: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+      align-items: flex-start;
+      max-width: none;
+    }
+
+    .promo-card__text {
       text-align: left;
     }
 
