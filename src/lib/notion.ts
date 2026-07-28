@@ -108,6 +108,57 @@ function getDate(prop: any): string {
   return prop?.date?.start ?? '';
 }
 
+function normalizeKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9가-힣]/g, '');
+}
+
+function findProperty(properties: Record<string, any>, aliases: string[]): any {
+  const aliasSet = new Set(aliases.map(normalizeKey));
+  for (const [key, value] of Object.entries(properties || {})) {
+    if (aliasSet.has(normalizeKey(key))) return value;
+  }
+  return undefined;
+}
+
+function findTitleProperty(properties: Record<string, any>): any {
+  for (const value of Object.values(properties || {})) {
+    if ((value as any)?.type === 'title') return value;
+  }
+  return undefined;
+}
+
+function getRichTextOrTitleText(prop: any): string {
+  if (!prop) return '';
+  if (Array.isArray(prop.rich_text)) return getPlainText(prop.rich_text);
+  if (Array.isArray(prop.title)) return getPlainText(prop.title);
+  return '';
+}
+
+function getNoticeText(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+  const prop = findProperty(properties, aliases);
+  return prop ? getRichTextOrTitleText(prop) : fallback;
+}
+
+function getNoticeCheckbox(properties: Record<string, any>, aliases: string[], fallback = false): boolean {
+  const prop = findProperty(properties, aliases);
+  return prop ? getCheckbox(prop) : fallback;
+}
+
+function getNoticeSelect(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+  const prop = findProperty(properties, aliases);
+  return prop ? getSelectValue(prop) : fallback;
+}
+
+function getNoticeUrl(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+  const prop = findProperty(properties, aliases);
+  return prop ? getUrl(prop) : fallback;
+}
+
+function getNoticeDate(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+  const prop = findProperty(properties, aliases);
+  return prop ? getDate(prop) : fallback;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -331,19 +382,17 @@ export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
   try {
     const res = await notion.databases.query({
       database_id: noticesDbId,
-      filter: {
-        and: [
-          { property: 'published', checkbox: { equals: true } },
-          { property: 'show_on_home', checkbox: { equals: true } },
-        ],
-      },
-      sorts: [
-        { property: 'important', direction: 'descending' },
-        { property: 'published_at', direction: 'descending' },
-      ],
-      page_size: limit,
+      page_size: 100,
     });
-    return res.results.map((row: any) => mapNoticeRow(row));
+
+    return res.results
+      .map((row: any) => mapNoticeRow(row))
+      .filter((notice) => notice.published && notice.showOnHome)
+      .sort((a, b) => {
+        if (a.important !== b.important) return a.important ? -1 : 1;
+        return String(b.publishedAt || '').localeCompare(String(a.publishedAt || ''));
+      })
+      .slice(0, limit);
   } catch (e) {
     console.error('Failed to fetch notices:', e);
     return [];
@@ -399,18 +448,21 @@ function mapPostRow(row: any): BlogPost {
 }
 
 function mapNoticeRow(row: any): NoticeItem {
+  const properties = row.properties || {};
+  const titleProp = findTitleProperty(properties);
+
   return {
     id: row.id,
-    slug: getPlainText(row.properties['slug']?.rich_text),
-    title: getPlainText(row.properties['title']?.title),
-    published: getCheckbox(row.properties['published']),
-    publishedAt: getDate(row.properties['published_at']),
-    showOnHome: getCheckbox(row.properties['show_on_home']),
-    important: getCheckbox(row.properties['important']),
-    category: getSelectValue(row.properties['category']),
-    location: getSelectValue(row.properties['location']),
-    summary: getPlainText(row.properties['summary']?.rich_text),
-    linkUrl: getUrl(row.properties['link_url']),
+    slug: getNoticeText(properties, ['slug'], ''),
+    title: getRichTextOrTitleText(titleProp) || getNoticeText(properties, ['title', 'name', '공지제목'], ''),
+    published: getNoticeCheckbox(properties, ['published', '공개', '게시', '노출'], false),
+    publishedAt: getNoticeDate(properties, ['published_at', 'published at', 'publishedat', 'date', '날짜', '게시일', '발행일'], ''),
+    showOnHome: getNoticeCheckbox(properties, ['show_on_home', 'show on home', 'showonhome', '홈노출', '홈 노출'], false),
+    important: getNoticeCheckbox(properties, ['important', '중요'], false),
+    category: getNoticeSelect(properties, ['category', '카테고리'], ''),
+    location: getNoticeSelect(properties, ['location', '지점', '위치'], ''),
+    summary: getNoticeText(properties, ['summary', 'excerpt', '요약'], ''),
+    linkUrl: getNoticeUrl(properties, ['link_url', 'link url', 'linkurl', 'url', '링크'], ''),
     body: '',
     updatedAt: row.last_edited_time ?? '',
   };
