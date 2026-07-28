@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllNotices, getNoticeFullBySlug } from '../../lib/notion';
+import { format } from 'date-fns';
+import type { NoticeItem } from '../../lib/notion';
+
+export async function getStaticPaths() {
+  const notices = await getAllNotices();
+  return notices
+    .filter((notice) => Boolean(notice.slug))
+    .map((notice) => ({
+      params: { slug: notice.slug },
+      props: { notice },
+    }));
+}
+
+interface Props {
+  notice: NoticeItem;
+}
+
+const { notice } = Astro.props as Props;
+const resolvedNotice = (await getNoticeFullBySlug(notice.slug)) ?? notice;
+const dateLabel = resolvedNotice.publishedAt
+  ? format(new Date(resolvedNotice.publishedAt), 'yyyy.MM.dd')
+  : '';
+const hasRealBody = !!(resolvedNotice.body && resolvedNotice.body.trim());
+---
+<BaseLayout
+  title={resolvedNotice.title}
+  description={resolvedNotice.summary || `${resolvedNotice.title} 공지 상세 페이지`}
+  canonicalPath={`/notices/${resolvedNotice.slug}`}
+>
+  <article class="post-detail">
+    <div class="post-detail__meta">
+      {resolvedNotice.important && <span class="post-card__category">중요</span>}
+      {resolvedNotice.location && <span class="post-card__category">{resolvedNotice.location}</span>}
+      {resolvedNotice.category && <span class="post-card__category">{resolvedNotice.category}</span>}
+      {dateLabel && <span>{dateLabel}</span>}
+    </div>
+
+    <h1 class="post-detail__title">{resolvedNotice.title}</h1>
+    {resolvedNotice.summary && <p class="post-detail__excerpt">{resolvedNotice.summary}</p>}
+
+    {hasRealBody ? (
+      <div class="post-detail__body" set:html={resolvedNotice.body} />
+    ) : (
+      <div class="post-detail__body">
+        <p>이 공지의 본문 블록이 아직 비어 있습니다. Notion 공지 페이지 본문 영역에 내용을 작성하면 이 자리에 그대로 반영됩니다.</p>
+      </div>
+    )}
+
+    {resolvedNotice.linkUrl && (
+      <div class="cta">
+        <h3>외부 안내 페이지도 함께 확인해 주세요.</h3>
+        <p>필요한 경우 외부 신청/안내 링크로 이동할 수 있습니다.</p>
+        <a href={resolvedNotice.linkUrl} class="btn" target="_blank" rel="noreferrer">외부 링크 열기</a>
+      </div>
+    )}
+  </article>
+</BaseLayout>
+
+<style>
+  .post-detail__body :global(figure.notion-figure) {
+    margin: 24px 0;
+  }
+
+  .post-detail__body :global(figure.notion-figure img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+  }
+
+  .post-detail__body :global(figure.notion-figure figcaption) {
+    margin-top: 8px;
+    font-size: 0.92rem;
+    color: #667085;
+    text-align: center;
+  }
+</style>

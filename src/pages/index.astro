@@ -58,7 +58,11 @@ const heroSecondaryUrl = homePage?.meta.heroSecondaryUrl || '/contact';
                   {notice.category && <span class="home-notices__badge">{notice.category}</span>}
                 </div>
                 <div class="home-notices__content">
-                  {notice.linkUrl ? (
+                  {notice.slug ? (
+                    <a href={`/notices/${notice.slug}`} class="home-notices__title">
+                      {notice.title}
+                    </a>
+                  ) : notice.linkUrl ? (
                     <a href={notice.linkUrl} class="home-notices__title" target="_blank" rel="noreferrer">
                       {notice.title}
                     </a>

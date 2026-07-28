@@ -375,7 +375,7 @@ export async function getAllCategories(): Promise<string[]> {
   return Array.from(new Set(posts.map((p) => p.category))).sort();
 }
 
-export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
+export async function getAllNotices(): Promise<NoticeItem[]> {
   if (!token || !noticesDbId || !notion) {
     return [];
   }
@@ -387,16 +387,45 @@ export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
 
     return res.results
       .map((row: any) => mapNoticeRow(row))
-      .filter((notice) => notice.published && notice.showOnHome)
+      .filter((notice) => notice.published)
       .sort((a, b) => {
         if (a.important !== b.important) return a.important ? -1 : 1;
         return String(b.publishedAt || '').localeCompare(String(a.publishedAt || ''));
-      })
-      .slice(0, limit);
+      });
   } catch (e) {
     console.error('Failed to fetch notices:', e);
     return [];
   }
+}
+
+export async function getNoticeBySlug(slug: string): Promise<NoticeItem | null> {
+  const notices = await getAllNotices();
+  return notices.find((notice) => notice.slug === slug) ?? null;
+}
+
+export async function getNoticeFullBySlug(slug: string): Promise<NoticeItem | null> {
+  const meta = await getNoticeBySlug(slug);
+  if (!meta) return null;
+
+  let body = '';
+  if (meta.id) {
+    try {
+      const blocks = await fetchAllChildBlocks(meta.id);
+      body = blocksToMarkdown(blocks);
+    } catch (e) {
+      console.error('Failed to fetch notice body:', e);
+    }
+  }
+
+  return {
+    ...meta,
+    body,
+  };
+}
+
+export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
+  const notices = await getAllNotices();
+  return notices.filter((notice) => notice.showOnHome).slice(0, limit);
 }
 
 function mapPageRow(row: any): SitePage {
