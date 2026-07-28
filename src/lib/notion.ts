@@ -3,12 +3,11 @@ import { Client } from '@notionhq/client';
 const token = import.meta.env.NOTION_TOKEN;
 const postsDbId = import.meta.env.NOTION_POSTS_DB_ID;
 const pagesDbId = import.meta.env.NOTION_PAGES_DB_ID;
+const noticesDbId = import.meta.env.NOTION_NOTICES_DB_ID;
 
 export const isNotionConfigured = Boolean(token && postsDbId && pagesDbId);
 
-const notion = isNotionConfigured ? new Client({ auth: token }) : null;
-
-// ----- Type definitions matching the Notion DB schemas we designed -----
+const notion = token ? new Client({ auth: token }) : null;
 
 export interface SitePage {
   id: string;
@@ -18,6 +17,8 @@ export interface SitePage {
     | 'home'
     | 'about'
     | 'services'
+    | 'blog'
+    | 'publisher'
     | 'cases'
     | 'contact'
     | 'privacy'
@@ -25,9 +26,14 @@ export interface SitePage {
   published: boolean;
   navVisible: boolean;
   navOrder: number;
+  navLabel: string;
   excerpt: string;
   seoTitle: string;
   seoDescription: string;
+  heroPrimaryLabel: string;
+  heroPrimaryUrl: string;
+  heroSecondaryLabel: string;
+  heroSecondaryUrl: string;
   body: string;
   updatedAt: string;
 }
@@ -52,7 +58,21 @@ export interface BlogPost {
   updatedAt: string;
 }
 
-// ----- Helpers -----
+export interface NoticeItem {
+  id: string;
+  slug: string;
+  title: string;
+  published: boolean;
+  publishedAt: string;
+  showOnHome: boolean;
+  important: boolean;
+  category: string;
+  location: string;
+  summary: string;
+  linkUrl: string;
+  body: string;
+  updatedAt: string;
+}
 
 function getPlainText(richText: any[] | undefined): string {
   if (!Array.isArray(richText)) return '';
@@ -105,7 +125,6 @@ function getImageBlockUrl(block: any): string {
   return block.image?.external?.url || block.image?.file?.url || '';
 }
 
-// Read blocks recursively and convert to markdown-ish HTML
 function blocksToMarkdown(blocks: any[]): string {
   const lines: string[] = [];
   for (const block of blocks) {
@@ -151,7 +170,9 @@ function blocksToMarkdown(blocks: any[]): string {
         const caption = getPlainText(block.image?.caption);
         if (imageUrl) {
           lines.push(
-            `<figure class="notion-figure notion-figure--image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(caption || '본문 이미지')}" loading="lazy" />${
+            `<figure class="notion-figure notion-figure--image"><img src="${escapeHtml(
+              imageUrl
+            )}" alt="${escapeHtml(caption || '본문 이미지')}" loading="lazy" />${
               caption ? `<figcaption>${renderInlineText(caption)}</figcaption>` : ''
             }</figure>`
           );
@@ -164,14 +185,22 @@ function blocksToMarkdown(blocks: any[]): string {
       case 'bookmark': {
         const url = block.bookmark?.url ?? '';
         if (url) {
-          lines.push(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></p>`);
+          lines.push(
+            `<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(
+              url
+            )}</a></p>`
+          );
         }
         break;
       }
       case 'embed': {
         const url = block.embed?.url ?? '';
         if (url) {
-          lines.push(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a></p>`);
+          lines.push(
+            `<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(
+              url
+            )}</a></p>`
+          );
         }
         break;
       }
@@ -182,15 +211,13 @@ function blocksToMarkdown(blocks: any[]): string {
   return lines.join('\n');
 }
 
-// ----- Fetchers -----
-
 export async function getSitePages(): Promise<SitePage[]> {
-  if (!isNotionConfigured || !notion) {
-    return []; // mock mode: pages DB not used, fallback content shown
+  if (!token || !pagesDbId || !notion) {
+    return [];
   }
   try {
     const res = await notion.databases.query({
-      database_id: pagesDbId!,
+      database_id: pagesDbId,
       filter: { property: 'published', checkbox: { equals: true } },
       sorts: [{ property: 'nav_order', direction: 'ascending' }],
     });
@@ -208,7 +235,6 @@ export async function getSitePageByType(
   return pages.find((p) => p.pageType === pageType) ?? null;
 }
 
-// Fetch all child blocks of a given page/block (paginated). Returns plain array of blocks.
 async function fetchAllChildBlocks(blockId: string): Promise<any[]> {
   if (!notion) return [];
   const all: any[] = [];
@@ -226,9 +252,6 @@ async function fetchAllChildBlocks(blockId: string): Promise<any[]> {
   return all;
 }
 
-// Fetch a SitePage together with its rendered body HTML.
-// body is empty string when Notion isn't configured, the page doesn't exist,
-// or the page has no child blocks. Page templates should treat empty body as "use fallback".
 export async function getSitePageFull(
   pageType: SitePage['pageType']
 ): Promise<{ meta: SitePage; body: string } | null> {
@@ -247,12 +270,12 @@ export async function getSitePageFull(
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  if (!isNotionConfigured || !notion) {
-    return []; // fallback to mock data in caller
+  if (!token || !postsDbId || !notion) {
+    return [];
   }
   try {
     const res = await notion.databases.query({
-      database_id: postsDbId!,
+      database_id: postsDbId,
       filter: { property: 'published', checkbox: { equals: true } },
       sorts: [{ property: 'published_at', direction: 'descending' }],
       page_size: 100,
@@ -301,28 +324,50 @@ export async function getAllCategories(): Promise<string[]> {
   return Array.from(new Set(posts.map((p) => p.category))).sort();
 }
 
-// ----- Mapping -----
+export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
+  if (!token || !noticesDbId || !notion) {
+    return [];
+  }
+  try {
+    const res = await notion.databases.query({
+      database_id: noticesDbId,
+      filter: {
+        and: [
+          { property: 'published', checkbox: { equals: true } },
+          { property: 'show_on_home', checkbox: { equals: true } },
+        ],
+      },
+      sorts: [
+        { property: 'important', direction: 'descending' },
+        { property: 'published_at', direction: 'descending' },
+      ],
+      page_size: limit,
+    });
+    return res.results.map((row: any) => mapNoticeRow(row));
+  } catch (e) {
+    console.error('Failed to fetch notices:', e);
+    return [];
+  }
+}
 
 function mapPageRow(row: any): SitePage {
   return {
     id: row.id,
     slug: getPlainText(row.properties['slug']?.rich_text),
     title: getPlainText(row.properties['title']?.title),
-    pageType: (getSelectValue(row.properties['page_type']) || 'about') as
-      | 'about'
-      | 'services'
-      | 'cases'
-      | 'contact'
-      | 'privacy'
-      | 'legal'
-      | 'home',
+    pageType: (getSelectValue(row.properties['page_type']) || 'about') as SitePage['pageType'],
     published: getCheckbox(row.properties['published']),
     navVisible: getCheckbox(row.properties['nav_visible']),
     navOrder: row.properties['nav_order']?.number ?? 0,
+    navLabel: getPlainText(row.properties['nav_label']?.rich_text),
     excerpt: getPlainText(row.properties['excerpt']?.rich_text),
     seoTitle: getPlainText(row.properties['seo_title']?.rich_text),
     seoDescription: getPlainText(row.properties['seo_description']?.rich_text),
-    body: '', // body loaded separately per page if needed
+    heroPrimaryLabel: getPlainText(row.properties['hero_primary_label']?.rich_text),
+    heroPrimaryUrl: getUrl(row.properties['hero_primary_url']),
+    heroSecondaryLabel: getPlainText(row.properties['hero_secondary_label']?.rich_text),
+    heroSecondaryUrl: getUrl(row.properties['hero_secondary_url']),
+    body: '',
     updatedAt: row.last_edited_time ?? '',
   };
 }
@@ -349,6 +394,24 @@ function mapPostRow(row: any): BlogPost {
         | 'summary_from_naver',
     legacyUrl: getUrl(row.properties['legacy_url']),
     noindex: getCheckbox(row.properties['noindex']),
+    updatedAt: row.last_edited_time ?? '',
+  };
+}
+
+function mapNoticeRow(row: any): NoticeItem {
+  return {
+    id: row.id,
+    slug: getPlainText(row.properties['slug']?.rich_text),
+    title: getPlainText(row.properties['title']?.title),
+    published: getCheckbox(row.properties['published']),
+    publishedAt: getDate(row.properties['published_at']),
+    showOnHome: getCheckbox(row.properties['show_on_home']),
+    important: getCheckbox(row.properties['important']),
+    category: getSelectValue(row.properties['category']),
+    location: getSelectValue(row.properties['location']),
+    summary: getPlainText(row.properties['summary']?.rich_text),
+    linkUrl: getUrl(row.properties['link_url']),
+    body: '',
     updatedAt: row.last_edited_time ?? '',
   };
 }

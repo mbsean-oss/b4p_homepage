@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSitePageFull } from '../lib/notion';
+
+const page = await getSitePageFull('publisher');
+const title = page?.meta.title || '책사화 출판사';
+const description =
+  page?.meta.seoDescription || page?.meta.excerpt || '책사화 출판사를 소개하는 페이지입니다.';
+const body = page?.body || '';
+const useNotion = Boolean(body);
+---
+
+{
+  useNotion ? (
+    <BaseLayout title={page!.meta.seoTitle || title} description={description}>
+      <section class="post-detail">
+        <span class="hero__pill">Publisher</span>
+        <h1 class="post-detail__title">{title}</h1>
+        {page!.meta.excerpt && <p class="post-detail__excerpt">{page!.meta.excerpt}</p>}
+        <div class="post-detail__body" set:html={body} />
+      </section>
+    </BaseLayout>
+  ) : (
+    <BaseLayout title="책사화 출판사" description="책사화 출판사를 소개하는 페이지입니다.">
+      <section class="post-detail">
+        <span class="hero__pill">Publisher</span>
+        <h1 class="post-detail__title">책사화 출판사</h1>
+        <p class="post-detail__excerpt">출판사 소개 페이지를 준비 중입니다.</p>
+        <div class="post-detail__body">
+          <p>Notion Site Pages DB에 <strong>page_type = publisher</strong> 행을 만들고 본문을 작성하면 이 페이지가 그대로 반영됩니다.</p>
+        </div>
+      </section>
+    </BaseLayout>
+  )
+}

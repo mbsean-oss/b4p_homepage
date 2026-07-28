@@ -3,21 +3,64 @@ import {
   getSitePages,
   isNotionConfigured,
   type BlogPost,
+  type SitePage,
 } from './notion';
 import { mockBlogPosts, mockCategories } from './mock-data';
 
-export const SITE_NAME = import.meta.env.SITE_NAME || 'My Business Site';
-export const SITE_DESCRIPTION = import.meta.env.SITE_DESCRIPTION ||
-  'A clean business homepage powered by Notion + Astro + Cloudflare Pages';
+export const SITE_NAME = import.meta.env.SITE_NAME || '책먹는4차원화가';
+export const SITE_DESCRIPTION =
+  import.meta.env.SITE_DESCRIPTION || '책먹는4차원화가 홈페이지';
 
-// Header navigation - always shows these items (Notion can override order/labels if available).
-export const navItems = [
+export interface NavItem {
+  label: string;
+  href: string;
+}
+
+export const fallbackNavItems: NavItem[] = [
   { label: '홈', href: '/' },
   { label: '소개', href: '/about' },
-  { label: '서비스', href: '/services' },
+  { label: '수업프로그램', href: '/services' },
   { label: '블로그', href: '/blog' },
+  { label: '책사화 출판사', href: '/publisher' },
   { label: '문의', href: '/contact' },
 ];
+
+function pageHref(page: SitePage): string {
+  switch (page.pageType) {
+    case 'home':
+      return '/';
+    case 'blog':
+      return '/blog';
+    case 'about':
+      return '/about';
+    case 'services':
+      return '/services';
+    case 'publisher':
+      return '/publisher';
+    case 'contact':
+      return '/contact';
+    case 'privacy':
+      return '/privacy';
+    default:
+      return page.slug ? `/${page.slug.replace(/^\//, '')}` : '/';
+  }
+}
+
+export async function getNavItems(): Promise<NavItem[]> {
+  const pages = await getSitePages();
+  const visiblePages = pages.filter((page) => page.navVisible);
+
+  if (visiblePages.length === 0) {
+    return fallbackNavItems;
+  }
+
+  return visiblePages
+    .sort((a, b) => a.navOrder - b.navOrder)
+    .map((page) => ({
+      label: page.navLabel || page.title,
+      href: pageHref(page),
+    }));
+}
 
 export async function getAllPosts(): Promise<BlogPost[]> {
   const posts = await getBlogPosts();

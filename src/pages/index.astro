@@ -2,17 +2,22 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PostCard from '../components/PostCard.astro';
 import { SITE_NAME, SITE_DESCRIPTION, getAllPosts, getCategories } from '../lib/site';
-import { getSitePageFull } from '../lib/notion';
+import { getHomeNotices, getSitePageFull } from '../lib/notion';
 
 const posts = await getAllPosts();
 const featured = posts.filter((p) => p.featured).slice(0, 3);
 const recent = posts.slice(0, 6);
 const categories = await getCategories();
+const notices = await getHomeNotices(10);
 
 const homePage = await getSitePageFull('home');
 const heroTitle = homePage?.meta.title || SITE_NAME;
 const heroSubtitle = homePage?.meta.excerpt || SITE_DESCRIPTION;
 const heroBody = homePage?.body || '';
+const heroPrimaryLabel = homePage?.meta.heroPrimaryLabel || '수업 프로그램 보기';
+const heroPrimaryUrl = homePage?.meta.heroPrimaryUrl || '/services';
+const heroSecondaryLabel = homePage?.meta.heroSecondaryLabel || '문의하기';
+const heroSecondaryUrl = homePage?.meta.heroSecondaryUrl || '/contact';
 ---
 
 <BaseLayout
@@ -25,14 +30,50 @@ const heroBody = homePage?.body || '';
       <h1 class="hero__title">{heroTitle}</h1>
       <p class="hero__subtitle">{heroSubtitle}</p>
       <div class="hero__cta">
-        <a href="/blog" class="btn btn--primary">블로그 둘러보기</a>
-        <a href="/contact" class="btn btn--ghost">문의하기</a>
+        <a href={heroPrimaryUrl} class="btn btn--primary">{heroPrimaryLabel}</a>
+        <a href={heroSecondaryUrl} class="btn btn--ghost">{heroSecondaryLabel}</a>
       </div>
       {heroBody && (
         <div class="post-detail__body" style="margin-top:32px; max-width: 720px; margin-left:auto; margin-right:auto;" set:html={heroBody} />
       )}
     </div>
   </section>
+
+  {
+    notices.length > 0 && (
+      <section class="section section--alt">
+        <div class="container">
+          <div class="home-notices__header">
+            <div>
+              <h2 class="section__title">학원 공지사항</h2>
+              <p class="section__subtitle">중요 공지와 최신 소식을 빠르게 확인하세요.</p>
+            </div>
+          </div>
+          <ul class="home-notices__list">
+            {notices.map((notice) => (
+              <li class="home-notices__item">
+                <div class="home-notices__badges">
+                  {notice.important && <span class="home-notices__badge home-notices__badge--important">중요</span>}
+                  {notice.location && <span class="home-notices__badge">{notice.location}</span>}
+                  {notice.category && <span class="home-notices__badge">{notice.category}</span>}
+                </div>
+                <div class="home-notices__content">
+                  {notice.linkUrl ? (
+                    <a href={notice.linkUrl} class="home-notices__title" target="_blank" rel="noreferrer">
+                      {notice.title}
+                    </a>
+                  ) : (
+                    <span class="home-notices__title">{notice.title}</span>
+                  )}
+                  <time class="home-notices__date" datetime={notice.publishedAt}>{notice.publishedAt}</time>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
 
   {
     featured.length > 0 && (
@@ -85,3 +126,85 @@ const heroBody = homePage?.body || '';
     )
   }
 </BaseLayout>
+
+<style>
+  .home-notices__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .home-notices__item {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+  }
+
+  .home-notices__badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 140px;
+  }
+
+  .home-notices__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    background: rgba(15, 23, 42, 0.08);
+    color: #334155;
+  }
+
+  .home-notices__badge--important {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-weight: 700;
+  }
+
+  .home-notices__content {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .home-notices__title {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .home-notices__title:hover {
+    text-decoration: underline;
+  }
+
+  .home-notices__date {
+    color: #64748b;
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    .home-notices__item,
+    .home-notices__content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .home-notices__badges {
+      min-width: auto;
+    }
+  }
+</style>
