@@ -1,214 +1,842 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from '../components/PostCard.astro';
-import { SITE_NAME, SITE_DESCRIPTION, getAllPosts, getCategories } from '../lib/site';
-import { getHomeNotices, getSitePageFull } from '../lib/notion';
+import { SITE_NAME, SITE_DESCRIPTION, getAllPosts } from '../lib/site';
+import {
+  getHomeNotices,
+  getHomePrograms,
+  getHomeSketches,
+  getSitePageFull,
+} from '../lib/notion';
 
 const posts = await getAllPosts();
-const featured = posts.filter((p) => p.featured).slice(0, 3);
-const recent = posts.slice(0, 6);
-const categories = await getCategories();
+const recentPosts = posts.slice(0, 3);
 const notices = await getHomeNotices(10);
+const programs = await getHomePrograms(5);
+const sketches = await getHomeSketches(4);
 
 const homePage = await getSitePageFull('home');
 const heroTitle = homePage?.meta.title || SITE_NAME;
 const heroSubtitle = homePage?.meta.excerpt || SITE_DESCRIPTION;
-const heroBody = homePage?.body || '';
+const sliderImages = homePage?.meta.heroSliderImages?.slice(0, 5) || [];
+const sliderEnabled = Boolean(homePage?.meta.heroSliderEnabled && sliderImages.length > 0);
+const sliderAutoplaySec = Math.max(2, homePage?.meta.heroSliderAutoplaySec || 4);
+const featureImage = homePage?.meta.heroFeatureImage || '';
+const featureCaption = homePage?.meta.heroFeatureCaption || '';
+const featureBgMode = homePage?.meta.heroFeatureBgMode || 'auto';
 const heroPrimaryLabel = homePage?.meta.heroPrimaryLabel || '수업 프로그램 보기';
 const heroPrimaryUrl = homePage?.meta.heroPrimaryUrl || '/services';
+const secondaryImage = homePage?.meta.heroSecondaryImage || '';
+const heroSecondaryText = homePage?.meta.heroSecondaryText || '모집 일정과 특강 소식을 한눈에 확인해보세요';
 const heroSecondaryLabel = homePage?.meta.heroSecondaryLabel || '문의하기';
 const heroSecondaryUrl = homePage?.meta.heroSecondaryUrl || '/contact';
+
+const featureBgMap: Record<string, string> = {
+  auto: '#eaf4f2',
+  teal: '#d9ece9',
+  cream: '#f6f1ea',
+  'soft-orange': '#f9e9dd',
+};
+
+const featureFallbackBg = featureBgMap[featureBgMode] || featureBgMap.auto;
+
+const programColorMap: Record<string, string> = {
+  teal: '#6bb8c4',
+  orange: '#f3b246',
+  coral: '#de6651',
+  yellow: '#f0c95c',
+  neutral: '#1d222b',
+};
 ---
 
 <BaseLayout
   title={homePage?.meta.seoTitle || heroTitle}
   description={homePage?.meta.seoDescription || heroSubtitle}
 >
-  <section class="hero">
-    <div class="container">
-      <span class="hero__pill">Notion CMS · Cloudflare Pages</span>
-      <h1 class="hero__title">{heroTitle}</h1>
-      <p class="hero__subtitle">{heroSubtitle}</p>
-      <div class="hero__cta">
-        <a href={heroPrimaryUrl} class="btn btn--primary">{heroPrimaryLabel}</a>
-        <a href={heroSecondaryUrl} class="btn btn--ghost">{heroSecondaryLabel}</a>
+  <section class="home-intro">
+    <div class="container home-intro__inner">
+      <div>
+        <h1 class="home-intro__title">{heroTitle}</h1>
+        {heroSubtitle && <p class="home-intro__subtitle">{heroSubtitle}</p>}
       </div>
-      {heroBody && (
-        <div class="post-detail__body" style="margin-top:32px; max-width: 720px; margin-left:auto; margin-right:auto;" set:html={heroBody} />
-      )}
     </div>
   </section>
 
   {
-    notices.length > 0 && (
-      <section class="section section--alt">
-        <div class="container">
-          <div class="home-notices__header">
-            <div>
-              <h2 class="section__title">학원 공지사항</h2>
-              <p class="section__subtitle">중요 공지와 최신 소식을 빠르게 확인하세요.</p>
+    sliderImages.length > 0 && (
+      <section class="home-slider-section">
+        <div
+          class="home-slider"
+          data-home-carousel
+          data-autoplay-seconds={String(sliderAutoplaySec)}
+          data-enabled={sliderEnabled ? 'true' : 'false'}
+        >
+          <div class="home-slider__viewport" data-carousel-viewport>
+            {sliderImages.map((image, index) => (
+              <figure class={`home-slider__slide${index === 0 ? ' is-active' : ''}`} data-slide>
+                <img src={image} alt={`홈 메인 이미지 ${index + 1}`} loading={index === 0 ? 'eager' : 'lazy'} data-slide-image />
+              </figure>
+            ))}
+          </div>
+          {sliderImages.length > 1 && (
+            <div class="home-slider__dots" aria-hidden="true">
+              {sliderImages.map((_, index) => (
+                <span class={`home-slider__dot${index === 0 ? ' is-active' : ''}`} data-dot />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    featureImage && (
+      <section class="feature-band" style={`--feature-fallback-bg:${featureFallbackBg};`} data-feature-band>
+        <div class="feature-band__backdrop" style={`background-image:url('${featureImage}')`}></div>
+        <div class="container feature-band__container">
+          <div class="feature-band__frame" data-feature-frame>
+            <img src={featureImage} alt={featureCaption || '학원 대표 이미지'} loading="lazy" data-feature-image />
+            <div class="feature-band__overlay">
+              {featureCaption && <p class="feature-band__caption">{featureCaption}</p>}
+              <a href={heroPrimaryUrl} class="btn btn--primary feature-band__cta">{heroPrimaryLabel}</a>
             </div>
           </div>
-          <ul class="home-notices__list">
-            {notices.map((notice) => (
-              <li class="home-notices__item">
-                <div class="home-notices__badges">
-                  {notice.important && <span class="home-notices__badge home-notices__badge--important">중요</span>}
-                  {notice.location && <span class="home-notices__badge">{notice.location}</span>}
-                  {notice.category && <span class="home-notices__badge">{notice.category}</span>}
-                </div>
-                <div class="home-notices__content">
-                  {notice.slug ? (
-                    <a href={`/notices/${notice.slug}`} class="home-notices__title">
-                      {notice.title}
-                    </a>
-                  ) : notice.linkUrl ? (
-                    <a href={notice.linkUrl} class="home-notices__title" target="_blank" rel="noreferrer">
-                      {notice.title}
-                    </a>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    programs.length > 0 && (
+      <section class="section section--programs">
+        <div class="container">
+          <div class="section-heading section-heading--center">
+            <h2 class="section__title">수업 프로그램</h2>
+            <p class="section__subtitle">책과 그림, 이야기로 연결되는 다섯 가지 프로그램을 소개합니다.</p>
+          </div>
+          <div class="program-grid">
+            {programs.map((program) => (
+              <article class="program-card" style={`--program-accent:${programColorMap[program.accentColor] || programColorMap.neutral};`}>
+                <div class="program-card__icon-wrap">
+                  {program.iconImage ? (
+                    <img src={program.iconImage} alt={program.title} class="program-card__icon" loading="lazy" />
                   ) : (
-                    <span class="home-notices__title">{notice.title}</span>
+                    <div class="program-card__icon program-card__icon--placeholder">{program.title.slice(0, 1)}</div>
                   )}
-                  <time class="home-notices__date" datetime={notice.publishedAt}>{notice.publishedAt}</time>
+                </div>
+                <h3 class="program-card__title">{program.title}</h3>
+                {program.summary && <p class="program-card__summary">{program.summary}</p>}
+              </article>
+            ))}
+          </div>
+          <div class="section-cta">
+            <a href="/services" class="btn btn--ghost">프로그램 자세히 보기</a>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section notice-promo-section">
+    <div class="container notice-promo-grid">
+      <div class="notice-panel">
+        <div class="section-heading">
+          <h2 class="section__title">학원 공지사항</h2>
+          <p class="section__subtitle">운영 공지, 모집 일정, 특강 소식을 빠르게 확인하세요.</p>
+        </div>
+
+        {notices.length > 0 ? (
+          <ul class="notice-list">
+            {notices.map((notice) => (
+              <li class="notice-item">
+                <div class="notice-item__meta">
+                  {notice.important && <span class="notice-badge notice-badge--important">중요</span>}
+                  {notice.location && <span class="notice-badge">{notice.location}</span>}
+                  {notice.category && <span class="notice-badge">{notice.category}</span>}
+                </div>
+                <div class="notice-item__body">
+                  {notice.slug ? (
+                    <a href={`/notices/${notice.slug}`} class="notice-item__title">{notice.title}</a>
+                  ) : notice.linkUrl ? (
+                    <a href={notice.linkUrl} class="notice-item__title" target="_blank" rel="noreferrer">{notice.title}</a>
+                  ) : (
+                    <span class="notice-item__title">{notice.title}</span>
+                  )}
+                  <time class="notice-item__date" datetime={notice.publishedAt}>{notice.publishedAt}</time>
                 </div>
               </li>
             ))}
           </ul>
-        </div>
-      </section>
-    )
-  }
+        ) : (
+          <div class="notice-empty">공지사항이 준비되면 이 영역에 자동으로 노출됩니다.</div>
+        )}
+      </div>
 
-  {
-    featured.length > 0 && (
-      <section class="section">
-        <div class="container">
-          <h2 class="section__title">추천 콘텐츠</h2>
-          <p class="section__subtitle">
-            운영자가 직접 큐레이션한 핵심 글을 먼저 만나보세요.
-          </p>
-          <div class="card-grid card-grid--3">
-            {featured.map((post) => <PostCard post={post} />)}
-          </div>
-        </div>
-      </section>
-    )
-  }
+      {
+        secondaryImage && (
+          <aside class="promo-card">
+            <div class="promo-card__media">
+              <img src={secondaryImage} alt={heroSecondaryText || '안내 이미지'} loading="lazy" />
+            </div>
+            <div class="promo-card__content">
+              {heroSecondaryText && <p class="promo-card__text">{heroSecondaryText}</p>}
+              <a href={heroSecondaryUrl} class="btn btn--primary">{heroSecondaryLabel}</a>
+            </div>
+          </aside>
+        )
+      }
+    </div>
+  </section>
 
-  {
-    categories.length > 0 && (
-      <section class="section section--alt">
-        <div class="container">
-          <h2 class="section__title">주제별 탐색</h2>
-          <p class="section__subtitle">관심 있는 주제로 깊이 있게 들어갈 수 있습니다.</p>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            {categories.map((cat) => (
-              <a href={`/blog/category/${encodeURIComponent(cat.toLowerCase())}`} class="blog-list__chip">
-                {cat}
-              </a>
-            ))}
-          </div>
+  <section class="section section--muted">
+    <div class="container story-grid">
+      <div>
+        <div class="section-heading">
+          <h2 class="section__title">블로그 최신글</h2>
+          <p class="section__subtitle">최근 올라온 글을 간결하게 모아보았습니다.</p>
         </div>
-      </section>
-    )
-  }
+        <div class="simple-posts">
+          {recentPosts.map((post) => (
+            <a href={`/blog/${post.slug}`} class="simple-post">
+              <div class="simple-post__text">
+                <span class="simple-post__category">{post.category || '블로그'}</span>
+                <strong class="simple-post__title">{post.title}</strong>
+                {post.excerpt && <span class="simple-post__excerpt">{post.excerpt}</span>}
+              </div>
+              <span class="simple-post__date">{post.publishedAt}</span>
+            </a>
+          ))}
+        </div>
+      </div>
 
-  {
-    recent.length > 0 && (
-      <section class="section">
-        <div class="container">
-          <h2 class="section__title">최근 글</h2>
-          <p class="section__subtitle">전체 최신 콘텐츠를 한곳에서 확인하세요.</p>
-          <div class="card-grid card-grid--3">
-            {recent.map((post) => <PostCard post={post} />)}
-          </div>
-          <div style="text-align:center; margin-top:32px;">
-            <a href="/blog" class="btn btn--ghost">모든 글 보기</a>
-          </div>
+      <div>
+        <div class="section-heading">
+          <h2 class="section__title">수업스케치</h2>
+          <p class="section__subtitle">수업 장면과 결과물을 심플하게 기록하는 공간입니다.</p>
         </div>
-      </section>
-    )
-  }
+        <div class="sketch-grid">
+          {sketches.map((sketch) => {
+            const Tag = sketch.linkUrl ? 'a' : 'article';
+            return (
+              <Tag href={sketch.linkUrl || undefined} class="sketch-card" target={sketch.linkUrl ? '_blank' : undefined} rel={sketch.linkUrl ? 'noreferrer' : undefined}>
+                {sketch.image && (
+                  <div class="sketch-card__image-wrap">
+                    <img src={sketch.image} alt={sketch.title} class="sketch-card__image" loading="lazy" />
+                  </div>
+                )}
+                <div class="sketch-card__body">
+                  <strong class="sketch-card__title">{sketch.title}</strong>
+                  {sketch.summary && <p class="sketch-card__summary">{sketch.summary}</p>}
+                </div>
+              </Tag>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const setupHomeCarousel = () => {
+      const root = document.querySelector('[data-home-carousel]');
+      if (!root) return;
+
+      const slides = Array.from(root.querySelectorAll('[data-slide]'));
+      const images = Array.from(root.querySelectorAll('[data-slide-image]'));
+      const dots = Array.from(root.querySelectorAll('[data-dot]'));
+      const viewport = root.querySelector('[data-carousel-viewport]');
+      const autoplaySeconds = Number(root.getAttribute('data-autoplay-seconds') || '4');
+      const isEnabled = root.getAttribute('data-enabled') === 'true';
+      let current = 0;
+      let timer = null;
+
+      const setViewportHeight = (index) => {
+        if (!viewport || !images[index]) return;
+        const img = images[index];
+        const apply = () => {
+          if (!img.naturalWidth || !img.naturalHeight) return;
+          const ratio = img.naturalHeight / img.naturalWidth;
+          const width = viewport.clientWidth || img.clientWidth;
+          const height = Math.max(320, Math.min(window.innerHeight * 0.72, width * ratio));
+          viewport.style.height = `${height}px`;
+        };
+        if (img.complete) apply();
+        else img.addEventListener('load', apply, { once: true });
+      };
+
+      const show = (index) => {
+        current = index;
+        slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+        dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+        setViewportHeight(index);
+      };
+
+      images.forEach((img, index) => {
+        if (img.complete) setViewportHeight(index);
+        else img.addEventListener('load', () => current === index && setViewportHeight(index), { once: true });
+      });
+
+      show(0);
+      window.addEventListener('resize', () => show(current));
+
+      if (slides.length > 1 && isEnabled) {
+        timer = window.setInterval(() => {
+          show((current + 1) % slides.length);
+        }, Math.max(2, autoplaySeconds) * 1000);
+
+        root.addEventListener('mouseenter', () => timer && window.clearInterval(timer));
+        root.addEventListener('mouseleave', () => {
+          timer = window.setInterval(() => {
+            show((current + 1) % slides.length);
+          }, Math.max(2, autoplaySeconds) * 1000);
+        });
+      }
+    };
+
+    const setupFeatureTint = () => {
+      const band = document.querySelector('[data-feature-band]');
+      const frame = document.querySelector('[data-feature-frame]');
+      const img = document.querySelector('[data-feature-image]');
+      if (!band || !frame || !img) return;
+
+      const applyTint = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx || !img.naturalWidth || !img.naturalHeight) return;
+          const sampleSize = 32;
+          canvas.width = sampleSize;
+          canvas.height = sampleSize;
+          ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+          const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize);
+          let r = 0;
+          let g = 0;
+          let b = 0;
+          let count = 0;
+          for (let i = 0; i < data.length; i += 16) {
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+            count += 1;
+          }
+          if (!count) return;
+          band.style.setProperty('--feature-rgb', `${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}`);
+        } catch (error) {
+          frame.classList.add('is-tint-fallback');
+        }
+      };
+
+      if (img.complete) applyTint();
+      else img.addEventListener('load', applyTint, { once: true });
+    };
+
+    setupHomeCarousel();
+    setupFeatureTint();
+  </script>
 </BaseLayout>
 
 <style>
-  .home-notices__list {
+  .home-intro {
+    background: #fff;
+    padding: 2.5rem 0 1.5rem;
+  }
+
+  .home-intro__inner {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .home-intro__title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+    color: #153934;
+  }
+
+  .home-intro__subtitle {
+    margin: 0.9rem auto 0;
+    max-width: 760px;
+    color: #5f676f;
+    font-size: 1rem;
+  }
+
+  .home-slider-section {
+    background: #fff;
+    padding: 0 0 2rem;
+  }
+
+  .home-slider {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+  }
+
+  .home-slider__viewport {
+    position: relative;
+    width: 100%;
+    min-height: 320px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .home-slider__slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .home-slider__slide.is-active {
+    opacity: 1;
+  }
+
+  .home-slider__slide img {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .home-slider__dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.95rem;
+  }
+
+  .home-slider__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #d6dce2;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  .home-slider__dot.is-active {
+    background: #6bb8c4;
+    transform: scale(1.2);
+  }
+
+  .feature-band {
+    --feature-rgb: 107, 184, 196;
+    background: radial-gradient(circle at center, rgba(var(--feature-rgb), 0.13), transparent 62%), var(--feature-fallback-bg);
+    position: relative;
+    overflow: hidden;
+    padding: 4rem 0;
+  }
+
+  .feature-band__backdrop {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    filter: blur(50px) saturate(118%);
+    opacity: 0.34;
+    transform: scale(1.12);
+  }
+
+  .feature-band__container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .feature-band__frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  }
+
+  .feature-band__frame img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .feature-band__overlay {
+    position: absolute;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.8rem;
+    max-width: min(340px, calc(100% - 3rem));
+  }
+
+  .feature-band__caption {
+    margin: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    color: #17312f;
+    padding: 0.85rem 1rem;
+    border-radius: 18px;
+    font-weight: 600;
+    text-align: right;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+  }
+
+  .feature-band__cta {
+    box-shadow: 0 12px 24px rgba(21, 57, 52, 0.18);
+  }
+
+  .section-heading {
+    margin-bottom: 1.75rem;
+  }
+
+  .section-heading--center {
+    text-align: center;
+  }
+
+  .section--programs {
+    padding-top: 5rem;
+  }
+
+  .program-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .program-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 24px;
+    padding: 1.25rem 1rem 1.35rem;
+    text-align: center;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.04);
+  }
+
+  .program-card__icon-wrap {
+    margin-bottom: 0.9rem;
+  }
+
+  .program-card__icon {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto;
+    border-radius: 50%;
+    object-fit: cover;
+    background: color-mix(in srgb, var(--program-accent) 18%, white);
+    border: 8px solid color-mix(in srgb, var(--program-accent) 22%, white);
+  }
+
+  .program-card__icon--placeholder {
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.6rem;
+    background: var(--program-accent);
+  }
+
+  .program-card__title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #162129;
+  }
+
+  .program-card__summary {
+    margin: 0.7rem 0 0;
+    font-size: 0.92rem;
+    color: #66707a;
+  }
+
+  .section-cta {
+    margin-top: 1.6rem;
+    text-align: center;
+  }
+
+  .notice-promo-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .notice-panel,
+  .promo-card {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  }
+
+  .notice-panel {
+    padding: 1.5rem;
+  }
+
+  .notice-list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0.8rem;
   }
 
-  .home-notices__item {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 14px;
+  .notice-item {
+    border: 1px solid rgba(15, 23, 42, 0.07);
+    border-radius: 18px;
+    padding: 0.95rem 1rem;
+    background: #fff;
   }
 
-  .home-notices__badges {
+  .notice-item__meta {
     display: flex;
-    gap: 8px;
-    align-items: center;
+    gap: 0.45rem;
     flex-wrap: wrap;
-    min-width: 140px;
+    margin-bottom: 0.55rem;
   }
 
-  .home-notices__badge {
+  .notice-badge {
     display: inline-flex;
     align-items: center;
-    padding: 4px 10px;
+    padding: 0.22rem 0.6rem;
     border-radius: 999px;
-    font-size: 0.82rem;
-    background: rgba(15, 23, 42, 0.08);
-    color: #334155;
-  }
-
-  .home-notices__badge--important {
-    background: #fee2e2;
-    color: #b91c1c;
-    font-weight: 700;
-  }
-
-  .home-notices__content {
-    flex: 1;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .home-notices__title {
-    color: inherit;
-    text-decoration: none;
+    background: #eef2f4;
+    color: #50616a;
+    font-size: 0.78rem;
     font-weight: 600;
   }
 
-  .home-notices__title:hover {
+  .notice-badge--important {
+    background: #fee7e3;
+    color: #c54d35;
+  }
+
+  .notice-item__body {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .notice-item__title {
+    color: #13232a;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .notice-item__title:hover {
     text-decoration: underline;
   }
 
-  .home-notices__date {
-    color: #64748b;
+  .notice-item__date {
+    white-space: nowrap;
+    color: #7b8791;
+    font-size: 0.9rem;
+  }
+
+  .notice-empty {
+    border-radius: 18px;
+    background: #f8fafb;
+    padding: 1.2rem;
+    color: #69767f;
+  }
+
+  .promo-card {
+    display: flex;
+    flex-direction: column;
+    background: #173934;
+    color: #fff;
+  }
+
+  .promo-card__media img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .promo-card__content {
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .promo-card__text {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+
+  .section--muted {
+    background: #f1f3f4;
+  }
+
+  .story-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .simple-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .simple-post {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem 1.1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .simple-post:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .simple-post__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .simple-post__category {
+    color: #5f727d;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .simple-post__title {
+    color: #17242b;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .simple-post__excerpt {
+    color: #6f7a83;
     font-size: 0.92rem;
+  }
+
+  .simple-post__date {
+    color: #7d8890;
+    font-size: 0.86rem;
     white-space: nowrap;
   }
 
-  @media (max-width: 768px) {
-    .home-notices__item,
-    .home-notices__content {
+  .sketch-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .sketch-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .sketch-card:hover {
+    text-decoration: none;
+  }
+
+  .sketch-card__image-wrap {
+    aspect-ratio: 4 / 3;
+    background: #dfe5e7;
+  }
+
+  .sketch-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sketch-card__body {
+    padding: 1rem;
+  }
+
+  .sketch-card__title {
+    display: block;
+    color: #16252a;
+    margin-bottom: 0.45rem;
+  }
+
+  .sketch-card__summary {
+    margin: 0;
+    color: #6b7680;
+    font-size: 0.92rem;
+  }
+
+  @media (max-width: 1100px) {
+    .program-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .story-grid,
+    .notice-promo-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .home-intro {
+      padding-top: 1.6rem;
+    }
+
+    .program-grid,
+    .sketch-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .feature-band {
+      padding: 2.5rem 0;
+    }
+
+    .feature-band__overlay {
+      right: 1rem;
+      left: 1rem;
+      bottom: 1rem;
+      align-items: stretch;
+      max-width: none;
+    }
+
+    .feature-band__caption {
+      text-align: left;
+    }
+
+    .notice-item__body,
+    .simple-post {
       flex-direction: column;
       align-items: flex-start;
     }
+  }
 
-    .home-notices__badges {
-      min-width: auto;
+  @media (max-width: 560px) {
+    .program-grid,
+    .sketch-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .home-slider {
+      padding: 0 0.9rem;
     }
   }
 </style>

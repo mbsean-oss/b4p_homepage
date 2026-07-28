@@ -4,6 +4,8 @@ const token = import.meta.env.NOTION_TOKEN;
 const postsDbId = import.meta.env.NOTION_POSTS_DB_ID;
 const pagesDbId = import.meta.env.NOTION_PAGES_DB_ID;
 const noticesDbId = import.meta.env.NOTION_NOTICES_DB_ID;
+const programsDbId = import.meta.env.NOTION_PROGRAMS_DB_ID;
+const sketchesDbId = import.meta.env.NOTION_SKETCHES_DB_ID;
 
 export const isNotionConfigured = Boolean(token && postsDbId && pagesDbId);
 
@@ -30,8 +32,16 @@ export interface SitePage {
   excerpt: string;
   seoTitle: string;
   seoDescription: string;
+  heroSliderImages: string[];
+  heroSliderAutoplaySec: number;
+  heroSliderEnabled: boolean;
+  heroFeatureImage: string;
+  heroFeatureCaption: string;
+  heroFeatureBgMode: string;
   heroPrimaryLabel: string;
   heroPrimaryUrl: string;
+  heroSecondaryImage: string;
+  heroSecondaryText: string;
   heroSecondaryLabel: string;
   heroSecondaryUrl: string;
   body: string;
@@ -74,6 +84,31 @@ export interface NoticeItem {
   updatedAt: string;
 }
 
+export interface ProgramItem {
+  id: string;
+  title: string;
+  slug: string;
+  iconImage: string;
+  summary: string;
+  sortOrder: number;
+  visibleOnHome: boolean;
+  published: boolean;
+  accentColor: string;
+  updatedAt: string;
+}
+
+export interface SketchItem {
+  id: string;
+  title: string;
+  image: string;
+  summary: string;
+  sortOrder: number;
+  visibleOnHome: boolean;
+  published: boolean;
+  linkUrl: string;
+  updatedAt: string;
+}
+
 function getPlainText(richText: any[] | undefined): string {
   if (!Array.isArray(richText)) return '';
   return richText.map((t) => t.plain_text ?? '').join('');
@@ -95,17 +130,24 @@ function getUrl(prop: any): string {
   return prop?.url ?? '';
 }
 
-function getFilesUrls(prop: any): string {
+function getFilesList(prop: any): string[] {
   const files = prop?.files ?? [];
-  if (!files.length) return '';
-  const f = files[0];
-  if (f.external?.url) return f.external.url;
-  if (f.file?.url) return f.file.url;
-  return '';
+  return files
+    .map((f: any) => f?.external?.url || f?.file?.url || '')
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+function getFilesUrls(prop: any): string {
+  return getFilesList(prop)[0] ?? '';
 }
 
 function getDate(prop: any): string {
   return prop?.date?.start ?? '';
+}
+
+function getNumber(prop: any, fallback = 0): number {
+  return typeof prop?.number === 'number' ? prop.number : fallback;
 }
 
 function normalizeKey(value: string): string {
@@ -134,29 +176,44 @@ function getRichTextOrTitleText(prop: any): string {
   return '';
 }
 
-function getNoticeText(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+function getTextByAliases(properties: Record<string, any>, aliases: string[], fallback = ''): string {
   const prop = findProperty(properties, aliases);
   return prop ? getRichTextOrTitleText(prop) : fallback;
 }
 
-function getNoticeCheckbox(properties: Record<string, any>, aliases: string[], fallback = false): boolean {
+function getCheckboxByAliases(properties: Record<string, any>, aliases: string[], fallback = false): boolean {
   const prop = findProperty(properties, aliases);
   return prop ? getCheckbox(prop) : fallback;
 }
 
-function getNoticeSelect(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+function getSelectByAliases(properties: Record<string, any>, aliases: string[], fallback = ''): string {
   const prop = findProperty(properties, aliases);
   return prop ? getSelectValue(prop) : fallback;
 }
 
-function getNoticeUrl(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+function getUrlByAliases(properties: Record<string, any>, aliases: string[], fallback = ''): string {
   const prop = findProperty(properties, aliases);
   return prop ? getUrl(prop) : fallback;
 }
 
-function getNoticeDate(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+function getDateByAliases(properties: Record<string, any>, aliases: string[], fallback = ''): string {
   const prop = findProperty(properties, aliases);
   return prop ? getDate(prop) : fallback;
+}
+
+function getNumberByAliases(properties: Record<string, any>, aliases: string[], fallback = 0): number {
+  const prop = findProperty(properties, aliases);
+  return prop ? getNumber(prop, fallback) : fallback;
+}
+
+function getFilesByAliases(properties: Record<string, any>, aliases: string[]): string[] {
+  const prop = findProperty(properties, aliases);
+  return prop ? getFilesList(prop) : [];
+}
+
+function getFileByAliases(properties: Record<string, any>, aliases: string[], fallback = ''): string {
+  const prop = findProperty(properties, aliases);
+  return prop ? getFilesUrls(prop) : fallback;
 }
 
 function escapeHtml(value: string): string {
@@ -164,7 +221,7 @@ function escapeHtml(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/\"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
@@ -262,30 +319,6 @@ function blocksToMarkdown(blocks: any[]): string {
   return lines.join('\n');
 }
 
-export async function getSitePages(): Promise<SitePage[]> {
-  if (!token || !pagesDbId || !notion) {
-    return [];
-  }
-  try {
-    const res = await notion.databases.query({
-      database_id: pagesDbId,
-      filter: { property: 'published', checkbox: { equals: true } },
-      sorts: [{ property: 'nav_order', direction: 'ascending' }],
-    });
-    return res.results.map((row: any) => mapPageRow(row));
-  } catch (e) {
-    console.error('Failed to fetch site pages:', e);
-    return [];
-  }
-}
-
-export async function getSitePageByType(
-  pageType: SitePage['pageType']
-): Promise<SitePage | null> {
-  const pages = await getSitePages();
-  return pages.find((p) => p.pageType === pageType) ?? null;
-}
-
 async function fetchAllChildBlocks(blockId: string): Promise<any[]> {
   if (!notion) return [];
   const all: any[] = [];
@@ -303,9 +336,30 @@ async function fetchAllChildBlocks(blockId: string): Promise<any[]> {
   return all;
 }
 
-export async function getSitePageFull(
-  pageType: SitePage['pageType']
-): Promise<{ meta: SitePage; body: string } | null> {
+export async function getSitePages(): Promise<SitePage[]> {
+  if (!token || !pagesDbId || !notion) {
+    return [];
+  }
+  try {
+    const res = await notion.databases.query({
+      database_id: pagesDbId,
+      filter: { property: 'published', checkbox: { equals: true } },
+      sorts: [{ property: 'nav_order', direction: 'ascending' }],
+      page_size: 100,
+    });
+    return res.results.map((row: any) => mapPageRow(row));
+  } catch (e) {
+    console.error('Failed to fetch site pages:', e);
+    return [];
+  }
+}
+
+export async function getSitePageByType(pageType: SitePage['pageType']): Promise<SitePage | null> {
+  const pages = await getSitePages();
+  return pages.find((p) => p.pageType === pageType) ?? null;
+}
+
+export async function getSitePageFull(pageType: SitePage['pageType']): Promise<{ meta: SitePage; body: string } | null> {
   const meta = await getSitePageByType(pageType);
   if (!meta) return null;
   let body = '';
@@ -357,22 +411,17 @@ export async function getBlogPostFullBySlug(slug: string): Promise<BlogPost | nu
     }
   }
 
-  return {
-    ...meta,
-    body,
-  };
+  return { ...meta, body };
 }
 
-export async function getBlogPostsByCategory(
-  category: string
-): Promise<BlogPost[]> {
+export async function getBlogPostsByCategory(category: string): Promise<BlogPost[]> {
   const posts = await getBlogPosts();
   return posts.filter((p) => p.category.toLowerCase() === category.toLowerCase());
 }
 
 export async function getAllCategories(): Promise<string[]> {
   const posts = await getBlogPosts();
-  return Array.from(new Set(posts.map((p) => p.category))).sort();
+  return Array.from(new Set(posts.map((p) => p.category).filter(Boolean))).sort();
 }
 
 export async function getAllNotices(): Promise<NoticeItem[]> {
@@ -417,10 +466,7 @@ export async function getNoticeFullBySlug(slug: string): Promise<NoticeItem | nu
     }
   }
 
-  return {
-    ...meta,
-    body,
-  };
+  return { ...meta, body };
 }
 
 export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
@@ -428,23 +474,80 @@ export async function getHomeNotices(limit = 10): Promise<NoticeItem[]> {
   return notices.filter((notice) => notice.showOnHome).slice(0, limit);
 }
 
+export async function getAllPrograms(): Promise<ProgramItem[]> {
+  if (!token || !programsDbId || !notion) {
+    return [];
+  }
+  try {
+    const res = await notion.databases.query({
+      database_id: programsDbId,
+      page_size: 100,
+    });
+    return res.results
+      .map((row: any) => mapProgramRow(row))
+      .filter((item) => item.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  } catch (e) {
+    console.error('Failed to fetch programs:', e);
+    return [];
+  }
+}
+
+export async function getHomePrograms(limit = 5): Promise<ProgramItem[]> {
+  const programs = await getAllPrograms();
+  return programs.filter((item) => item.visibleOnHome).slice(0, limit);
+}
+
+export async function getAllSketches(): Promise<SketchItem[]> {
+  if (!token || !sketchesDbId || !notion) {
+    return [];
+  }
+  try {
+    const res = await notion.databases.query({
+      database_id: sketchesDbId,
+      page_size: 100,
+    });
+    return res.results
+      .map((row: any) => mapSketchRow(row))
+      .filter((item) => item.published)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  } catch (e) {
+    console.error('Failed to fetch sketches:', e);
+    return [];
+  }
+}
+
+export async function getHomeSketches(limit = 4): Promise<SketchItem[]> {
+  const sketches = await getAllSketches();
+  return sketches.filter((item) => item.visibleOnHome).slice(0, limit);
+}
+
 function mapPageRow(row: any): SitePage {
+  const properties = row.properties || {};
   return {
     id: row.id,
-    slug: getPlainText(row.properties['slug']?.rich_text),
-    title: getPlainText(row.properties['title']?.title),
-    pageType: (getSelectValue(row.properties['page_type']) || 'about') as SitePage['pageType'],
-    published: getCheckbox(row.properties['published']),
-    navVisible: getCheckbox(row.properties['nav_visible']),
-    navOrder: row.properties['nav_order']?.number ?? 0,
-    navLabel: getPlainText(row.properties['nav_label']?.rich_text),
-    excerpt: getPlainText(row.properties['excerpt']?.rich_text),
-    seoTitle: getPlainText(row.properties['seo_title']?.rich_text),
-    seoDescription: getPlainText(row.properties['seo_description']?.rich_text),
-    heroPrimaryLabel: getPlainText(row.properties['hero_primary_label']?.rich_text),
-    heroPrimaryUrl: getUrl(row.properties['hero_primary_url']),
-    heroSecondaryLabel: getPlainText(row.properties['hero_secondary_label']?.rich_text),
-    heroSecondaryUrl: getUrl(row.properties['hero_secondary_url']),
+    slug: getTextByAliases(properties, ['slug'], ''),
+    title: getTextByAliases(properties, ['title'], ''),
+    pageType: (getSelectByAliases(properties, ['page_type'], 'about') || 'about') as SitePage['pageType'],
+    published: getCheckboxByAliases(properties, ['published'], false),
+    navVisible: getCheckboxByAliases(properties, ['nav_visible'], false),
+    navOrder: getNumberByAliases(properties, ['nav_order'], 0),
+    navLabel: getTextByAliases(properties, ['nav_label'], ''),
+    excerpt: getTextByAliases(properties, ['excerpt'], ''),
+    seoTitle: getTextByAliases(properties, ['seo_title'], ''),
+    seoDescription: getTextByAliases(properties, ['seo_description'], ''),
+    heroSliderImages: getFilesByAliases(properties, ['hero_slider_images']).slice(0, 5),
+    heroSliderAutoplaySec: getNumberByAliases(properties, ['hero_slider_autoplay_sec'], 4),
+    heroSliderEnabled: getCheckboxByAliases(properties, ['hero_slider_enabled'], false),
+    heroFeatureImage: getFileByAliases(properties, ['hero_feature_image'], ''),
+    heroFeatureCaption: getTextByAliases(properties, ['hero_feature_caption'], ''),
+    heroFeatureBgMode: getSelectByAliases(properties, ['hero_feature_bg_mode'], 'auto'),
+    heroPrimaryLabel: getTextByAliases(properties, ['hero_primary_label'], ''),
+    heroPrimaryUrl: getUrlByAliases(properties, ['hero_primary_url'], ''),
+    heroSecondaryImage: getFileByAliases(properties, ['hero_secondary_image'], ''),
+    heroSecondaryText: getTextByAliases(properties, ['hero_secondary_text'], ''),
+    heroSecondaryLabel: getTextByAliases(properties, ['hero_secondary_label'], ''),
+    heroSecondaryUrl: getUrlByAliases(properties, ['hero_secondary_url'], ''),
     body: '',
     updatedAt: row.last_edited_time ?? '',
   };
@@ -482,17 +585,62 @@ function mapNoticeRow(row: any): NoticeItem {
 
   return {
     id: row.id,
-    slug: getNoticeText(properties, ['slug'], ''),
-    title: getRichTextOrTitleText(titleProp) || getNoticeText(properties, ['title', 'name', '공지제목'], ''),
-    published: getNoticeCheckbox(properties, ['published', '공개', '게시', '노출'], false),
-    publishedAt: getNoticeDate(properties, ['published_at', 'published at', 'publishedat', 'date', '날짜', '게시일', '발행일'], ''),
-    showOnHome: getNoticeCheckbox(properties, ['show_on_home', 'show on home', 'showonhome', '홈노출', '홈 노출'], false),
-    important: getNoticeCheckbox(properties, ['important', '중요'], false),
-    category: getNoticeSelect(properties, ['category', '카테고리'], ''),
-    location: getNoticeSelect(properties, ['location', '지점', '위치'], ''),
-    summary: getNoticeText(properties, ['summary', 'excerpt', '요약'], ''),
-    linkUrl: getNoticeUrl(properties, ['link_url', 'link url', 'linkurl', 'url', '링크'], ''),
+    slug: getTextByAliases(properties, ['slug'], ''),
+    title:
+      getRichTextOrTitleText(titleProp) ||
+      getTextByAliases(properties, ['title', 'name', '공지제목'], ''),
+    published: getCheckboxByAliases(properties, ['published', '공개', '게시', '노출'], false),
+    publishedAt: getDateByAliases(
+      properties,
+      ['published_at', 'published at', 'publishedat', 'date', '날짜', '게시일', '발행일'],
+      ''
+    ),
+    showOnHome: getCheckboxByAliases(
+      properties,
+      ['show_on_home', 'show on home', 'showonhome', '홈노출', '홈 노출'],
+      false
+    ),
+    important: getCheckboxByAliases(properties, ['important', '중요'], false),
+    category: getSelectByAliases(properties, ['category', '카테고리'], ''),
+    location: getSelectByAliases(properties, ['location', '지점', '위치'], ''),
+    summary: getTextByAliases(properties, ['summary', 'excerpt', '요약'], ''),
+    linkUrl: getUrlByAliases(properties, ['link_url', 'link url', 'linkurl', 'url', '링크'], ''),
     body: '',
+    updatedAt: row.last_edited_time ?? '',
+  };
+}
+
+function mapProgramRow(row: any): ProgramItem {
+  const properties = row.properties || {};
+  const titleProp = findTitleProperty(properties);
+
+  return {
+    id: row.id,
+    title: getRichTextOrTitleText(titleProp) || getTextByAliases(properties, ['title', 'name'], ''),
+    slug: getTextByAliases(properties, ['slug'], ''),
+    iconImage: getFileByAliases(properties, ['icon_image', 'icon'], ''),
+    summary: getTextByAliases(properties, ['summary', 'excerpt'], ''),
+    sortOrder: getNumberByAliases(properties, ['sort_order'], 0),
+    visibleOnHome: getCheckboxByAliases(properties, ['visible_on_home'], false),
+    published: getCheckboxByAliases(properties, ['published'], false),
+    accentColor: getSelectByAliases(properties, ['accent_color'], 'neutral'),
+    updatedAt: row.last_edited_time ?? '',
+  };
+}
+
+function mapSketchRow(row: any): SketchItem {
+  const properties = row.properties || {};
+  const titleProp = findTitleProperty(properties);
+
+  return {
+    id: row.id,
+    title: getRichTextOrTitleText(titleProp) || getTextByAliases(properties, ['title', 'name'], ''),
+    image: getFileByAliases(properties, ['image'], ''),
+    summary: getTextByAliases(properties, ['summary', 'excerpt'], ''),
+    sortOrder: getNumberByAliases(properties, ['sort_order'], 0),
+    visibleOnHome: getCheckboxByAliases(properties, ['visible_on_home'], false),
+    published: getCheckboxByAliases(properties, ['published'], false),
+    linkUrl: getUrlByAliases(properties, ['link_url', 'url', '링크'], ''),
     updatedAt: row.last_edited_time ?? '',
   };
 }
