@@ -6,9 +6,8 @@ const navItems = await getNavItems();
 ---
 <header class="site-header site-header--brand" data-mobile-nav-root>
   <div class="container site-header__inner">
-    <a href="/" class="site-header__logo site-header__logo--with-mark" aria-label={`${SITE_NAME} 홈`}>
-      <img src="/logo-book4painter.png" alt="" class="site-header__mark" />
-      <span class="site-header__logo-text">{SITE_NAME}</span>
+    <a href="/" class="site-header__logo site-header__logo--image" aria-label={`${SITE_NAME} 홈`}>
+      <img src="/logo-book4painter-header.png" alt="책먹는4차원화가" class="site-header__brand-image" />
     </a>
 
     <button type="button" class="site-header__menu-toggle" aria-label="메뉴 열기" aria-expanded="false" data-mobile-nav-toggle>
@@ -66,30 +65,20 @@ const navItems = await getNavItems();
     background: rgba(255, 255, 255, 0.97);
   }
 
-  .site-header__logo--with-mark {
+  .site-header__logo--image {
     display: inline-flex;
     align-items: center;
-    gap: 0.78rem;
-    color: #163934;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    min-width: 0;
+    max-width: min(100%, 360px);
   }
 
-  .site-header__logo--with-mark:hover {
+  .site-header__logo--image:hover {
     text-decoration: none;
   }
 
-  .site-header__logo-text {
-    white-space: nowrap;
-  }
-
-  .site-header__mark {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    object-fit: cover;
-    flex: 0 0 auto;
+  .site-header__brand-image {
+    display: block;
+    width: min(100%, 340px);
+    height: auto;
   }
 
   .site-header__menu-toggle {
@@ -115,20 +104,19 @@ const navItems = await getNavItems();
     display: block;
   }
 
+  .site-nav a.is-active,
+  .site-nav a:hover {
+    color: #EB6441;
+  }
+
   @media (max-width: 900px) {
     .site-header__inner {
       position: relative;
       height: 72px;
     }
 
-    .site-header__logo-text {
-      display: none;
-    }
-
-    .site-header__mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
+    .site-header__brand-image {
+      width: min(100%, 230px);
     }
 
     .site-header__menu-toggle {
@@ -138,8 +126,8 @@ const navItems = await getNavItems();
     .site-nav {
       position: absolute;
       top: calc(100% + 10px);
-      right: 24px;
-      left: 24px;
+      right: 18px;
+      left: 18px;
       display: none;
       flex-direction: column;
       gap: 0;
@@ -159,7 +147,8 @@ const navItems = await getNavItems();
 
     .site-nav a.is-active,
     .site-nav a:hover {
-      background: #f2f7f6;
+      background: rgba(235, 100, 65, 0.08);
+      color: #EB6441;
     }
 
     .site-header.is-open .site-nav {

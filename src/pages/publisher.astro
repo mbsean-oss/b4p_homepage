@@ -4,8 +4,7 @@ import { getSitePageFull } from '../lib/notion';
 
 const page = await getSitePageFull('publisher');
 const title = page?.meta.title || '책사화 출판사';
-const description =
-  page?.meta.seoDescription || page?.meta.excerpt || '책사화 출판사를 소개하는 페이지입니다.';
+const description = page?.meta.seoDescription || page?.meta.excerpt || '책사화 출판사의 출판 방향과 프로젝트를 소개합니다.';
 const body = page?.body || '';
 const useNotion = Boolean(body);
 ---
@@ -21,13 +20,22 @@ const useNotion = Boolean(body);
       </section>
     </BaseLayout>
   ) : (
-    <BaseLayout title="책사화 출판사" description="책사화 출판사를 소개하는 페이지입니다.">
+    <BaseLayout title="책사화 출판사" description="책사화 출판사의 출판 방향과 프로젝트를 소개합니다.">
       <section class="post-detail">
         <span class="hero__pill">Publisher</span>
         <h1 class="post-detail__title">책사화 출판사</h1>
-        <p class="post-detail__excerpt">출판사 소개 페이지를 준비 중입니다.</p>
+        <p class="post-detail__excerpt">아이들의 창작 경험이 한 권의 책으로 이어지도록 돕는 출판 프로젝트를 운영합니다.</p>
         <div class="post-detail__body">
-          <p>Notion Site Pages DB에 <strong>page_type = publisher</strong> 행을 만들고 본문을 작성하면 이 페이지가 그대로 반영됩니다.</p>
+          <p>
+            책사화 출판사는 책먹는4차원화가의 교육 경험을 바탕으로 어린이와 청소년의 이야기, 그림, 기록이 실제 출판 결과물로 완성될 수 있도록 기획과 제작을 진행합니다.
+          </p>
+          <h2>주요 방향</h2>
+          <p>
+            수업 결과물을 단순 전시로 끝내지 않고, 한 사람의 생각과 표현을 존중하는 출판 경험으로 연결합니다.
+            개인 작품집, 공동 프로젝트북, 수업 아카이브 제작 등 다양한 형태로 확장할 수 있습니다.
+          </p>
+          <h2>위치</h2>
+          <p>경기도 수원시 영통구 대학로 101, 202호</p>
         </div>
       </section>
     </BaseLayout>
